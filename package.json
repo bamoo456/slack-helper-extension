@@ -1,0 +1,56 @@
+{
+  "name": "slack-helper-extension",
+  "version": "1.2.0",
+  "description": "A Chrome extension that improves your Slack experience.",
+  "main": "background.js",
+  "type": "module",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "webpack --mode=production",
+    "build:dev": "webpack --mode=development",
+    "dev": "webpack --mode=development --watch",
+    "lint": "eslint *.js src/*.js --ignore-pattern 'webpack.config.js' --ignore-pattern 'eslint.config.js' --ignore-pattern 'example-usage.js'",
+    "lint:fix": "eslint *.js src/*.js --ignore-pattern 'webpack.config.js' --ignore-pattern 'eslint.config.js' --ignore-pattern 'example-usage.js' --fix",
+    "format": "prettier --write \"**/*.{js,json,html,css,md}\"",
+    "format:check": "prettier --check \"**/*.{js,json,html,css,md}\"",
+    "zip": "npm run build && zip -r slack-helper-extension.zip dist/",
+    "zip:dev": "zip -r slack-helper-extension-dev.zip . -x node_modules/\\* .git/\\* *.zip dist/\\*",
+    "clean": "rm -rf dist/ *.zip"
+  },
+  "keywords": [
+    "chrome-extension",
+    "slack",
+    "helper",
+    "gemini",
+    "ai",
+    "productivity"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@babel/core": "^7.27.3",
+    "@babel/preset-env": "^7.27.2",
+    "@eslint/js": "^9.27.0",
+    "babel-loader": "^10.0.0",
+    "copy-webpack-plugin": "^13.0.0",
+    "core-js": "^3.42.0",
+    "eslint": "^9.27.0",
+    "prettier": "^3.5.3",
+    "webpack": "^5.99.9",
+    "webpack-cli": "^6.0.1"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "."
+  },
+  "dependencies": {
+    "axios": "^1.9.0",
+    "lodash": "^4.17.21"
+  }
+}

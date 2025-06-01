@@ -1,0 +1,83 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Rule | Chrome Extension JS Best Practices (Markdown)
+
+### **Topic: JS File Size Reduction (#Performance)**
+
+* **[Rule]** **`Implement Code Splitting`**:
+    * **Command:** Use tools like `Webpack`/`Rollup` to split large JS files into functional chunks.
+    * **Goal:** Load only when needed, reducing initial load time.
+    * **Tags:** `#CodeSplitting`, `#Bundler`
+
+* **[Rule]** **`Enable Tree Shaking`**:
+    * **Command:** Ensure you use ES Modules (`import/export`) and enable Tree Shaking in your bundler.
+    * **Goal:** Automatically remove unused code (Dead Code).
+    * **Tags:** `#TreeShaking`, `#ESM`, `#Optimization`
+
+* **[Rule]** **`Perform Minification & Uglification`**:
+    * **Command:** Add `Terser` or `UglifyJS` to your build process.
+    * **Goal:** Remove whitespace, comments, shorten variable names, and aggressively compress files.
+    * **Tags:** `#Minification`, `#BuildProcess`
+
+* **[Rule]** **`Adopt Lazy Loading`**:
+    * **Command:** Use dynamic `import()` for non-core features to implement on-demand loading.
+    * **Goal:** Improve initial startup and interaction performance.
+    * **Tags:** `#LazyLoading`, `#DynamicImport`
+
+* **[Rule]** **`Audit External Dependencies`**:
+    * **Command:** Regularly check and remove unnecessary libraries; prefer lightweight alternatives.
+    * **Goal:** Prevent unnecessary code bloat.
+    * **Tags:** `#Dependencies`, `#Audit`
+
+* **[Rule]** **`Optimize Content Script Timing`**:
+    * **Command:** Carefully set `run_at` for `content_scripts` in `manifest.json` (recommend `document_idle`).
+    * **Goal:** Avoid blocking page rendering.
+    * **Tags:** `#ContentScripts`, `#Manifest`
+
+### **Topic: JS Modularity & Loading (#Architecture #Loading)**
+
+* **[Rule]** **`Prioritize ES Modules (ESM)`**:
+    * **Command:** Use `import` and `export` syntax extensively for modularization.
+    * **Goal:** Benefit from native support and static analysis advantages.
+    * **Tags:** `#ESM`, `#ModernJS`
+
+* **[Rule]** **`Leverage Bundlers`**:
+    * **Command:** Utilize `Webpack`/`Rollup` to automatically handle dependency resolution and packaging.
+    * **Goal:** Automate module and loading order management.
+    * **Tags:** `#Bundler`, `#BuildProcess`, `#DependencyManagement`
+
+* **[Rule]** **`Utilize Dynamic `import()`**:
+    * **Command:** Implement asynchronous, on-demand loading via `import('module-path')`.
+    * **Goal:** Combine with lazy loading for increased flexibility and performance.
+    * **Tags:** `#DynamicImport`, `#Async`
+
+* **[Rule]** **`Control Injection Precisely`**:
+    * **Command:** (MV3) Use `chrome.scripting.executeScript` for programmatic, conditional script injection.
+    * **Goal:** Load specific functions precisely when and where needed.
+    * **Tags:** `#ChromeAPI`, `#MV3`, `#ScriptInjection`
+
+### **Topic: Avoiding Loading Timing Issues (#Stability #Loading)**
+
+* **[Rule]** **`Declare Dependencies Explicitly`**:
+    * **Command:** **Crucially**, use `import/export` or bundler configurations to clearly define the dependency chain between modules.
+    * **Goal:** Enable tools or the browser to understand and handle the loading order correctly.
+    * **Tags:** `#DependencyManagement`, `#ESM`, `#Bundler`
+
+* **[Rule]** **`Master Asynchronous Flows`**:
+    * **Command:** Use `async/await` or Promises to ensure asynchronously loaded modules are ready before use.
+    * **Goal:** Prevent execution errors caused by modules not being loaded yet.
+    * **Tags:** `#Async`, `#Promises`, `#ErrorHandling`
+
+* **[Rule]** **`Load Based on Events`**:
+    * **Command:** Use Chrome API events or DOM events as triggers for module loading.
+    * **Goal:** Activate features at the appropriate time.
+    * **Tags:** `#Events`, `#ChromeAPI`
+
+* **[Rule]** **`Utilize Messaging for Coordination`**:
+    * **Command:** Use `chrome.runtime.sendMessage` to coordinate actions and module loading between different parts of the extension.
+    * **Goal:** Decouple components and enable them to work together.
+    * **Tags:** `#Messaging`, `#ChromeAPI`
+

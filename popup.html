@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Slack Helper</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <h1>📝 Slack 討論串摘要工具</h1>
+    
+    <div class="description">
+      <p>在 Slack 討論串中使用「📝 摘要此討論串」按鈕來自動提取訊息並在 Gemini 中生成摘要。</p>
+    </div>
+    
+
+
+    <!-- 設定標籤頁 -->
+    <div class="settings-tabs">
+      <button class="tab-button active" data-tab="prompt">📝 AI 提示詞</button>
+      <button class="tab-button" data-tab="scroll">⚙️ 滾動設定</button>
+      <button class="tab-button" data-tab="sync">🔄 模型同步</button>
+    </div>
+
+    <!-- AI提示詞 設定區域 -->
+    <div class="tab-content active" id="prompt-tab">
+      <div class="system-prompt-section">
+        <h3>📝 自定義 AI提示詞 </h3>
+        <div class="prompt-hint" style="font-size: 13px; color: #666; margin-bottom: 8px;">
+          ※ 在您的 AI提示詞 中加入 <code>{MESSAGES}</code>，系統會自動將其替換為需要摘要的 Slack 訊息內容。
+        </div>
+        
+        <!-- 當前已保存的 Prompt 預覽區域 -->
+        <div class="current-prompt-preview">
+          <h4>📋 當前已保存的 Prompt：</h4>
+          <div id="currentPromptDisplay" class="prompt-display">
+            <div class="prompt-placeholder">載入中...</div>
+          </div>
+          <div class="prompt-info">
+            <span id="promptLength">字數：0</span>
+            <span id="promptStatus">狀態：未設定</span>
+          </div>
+        </div>
+        
+        <div class="prompt-controls">
+          <label for="systemPromptInput">編輯 AI提示詞：</label>
+          <textarea 
+            id="systemPromptInput" 
+            placeholder="輸入您的自定義 AI提示詞，或留空使用預設設置..."
+            rows="6"
+          ></textarea>
+          <div class="prompt-buttons">
+            <button id="savePromptBtn" class="btn-primary">💾 保存設置</button>
+            <button id="resetPromptBtn" class="btn-secondary">🔄 重置為預設</button>
+            <button id="loadCurrentBtn" class="btn-tertiary">📥 載入當前設定</button>
+          </div>
+          <div id="promptActionStatus" class="prompt-status"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 滾動設定區域 -->
+    <div class="tab-content" id="scroll-tab">
+      <div class="scroll-settings-section">
+        <h3>⚙️ 討論串訊息讀取設定</h3>
+        <div class="settings-hint" style="font-size: 13px; color: #666; margin-bottom: 16px;">
+          調整這些參數來優化訊息收集的速度和準確性。建議先使用預設值，如有需要再進行調整。
+        </div>
+
+        <!-- 基本設定 -->
+        <div class="settings-group">
+          <h4>基本滾動設定</h4>
+          <div class="setting-row">
+            <label for="scrollDelay">標準滾動延遲 (毫秒)</label>
+            <input type="number" id="scrollDelay" min="100" max="2000" step="50" value="400">
+            <small>控制標準滾動的等待時間</small>
+          </div>
+          <div class="setting-row">
+            <label for="scrollStep">標準滾動步長 (像素)</label>
+            <input type="number" id="scrollStep" min="100" max="2000" step="50" value="600">
+            <small>每次標準滾動的距離</small>
+          </div>
+          <div class="setting-row">
+            <label for="minScrollAmount">最小滾動距離 (像素)</label>
+            <input type="number" id="minScrollAmount" min="50" max="500" step="10" value="100">
+            <small>確保每次滾動的最小距離</small>
+          </div>
+        </div>
+
+        <!-- 高級設定 -->
+        <div class="settings-group">
+          <h4>高級設定</h4>
+          <div class="setting-row">
+            <label for="maxScrollAttempts">最大滾動次數</label>
+            <input type="number" id="maxScrollAttempts" min="10" max="1000" step="10" value="300">
+            <small>防止無限滾動的安全機制</small>
+          </div>
+          <div class="setting-row">
+            <label for="noMaxNewMessagesCount">停止滾動閾值</label>
+            <input type="number" id="noMaxNewMessagesCount" min="3" max="50" step="1" value="12">
+            <small>連續多少次無新訊息後停止滾動</small>
+          </div>
+        </div>
+
+
+
+        <!-- 操作按鈕 -->
+        <div class="scroll-settings-actions">
+          <button id="saveScrollSettings" class="btn-primary">💾 保存設定</button>
+          <button id="resetScrollSettings" class="btn-secondary">🔄 重置為預設值</button>
+          <button id="loadScrollSettings" class="btn-tertiary">📥 載入當前設定</button>
+        </div>
+        
+        <div id="scrollActionStatus" class="scroll-status"></div>
+      </div>
+    </div>
+
+    <!-- 模型同步設定區域 -->
+    <div class="tab-content" id="sync-tab">
+      <div class="sync-settings-section">
+        <h3>🔄 Gemini 模型同步</h3>
+        <div class="settings-hint" style="font-size: 13px; color: #666; margin-bottom: 16px;">
+          手動管理 Gemini 模型同步。使用手動同步來獲取最新的可用模型列表。
+        </div>
+
+        <!-- 同步狀態顯示 -->
+        <div class="settings-group">
+          <h4>🔍 同步狀態</h4>
+          <div class="sync-status-container">
+            <div id="syncStatusDisplay" class="status-display">
+              <span id="syncStatusIcon">⏳</span>
+              <span id="syncStatusText">檢查同步狀態中...</span>
+            </div>
+            <div class="sync-actions">
+              <button id="manualSyncPopupBtn" class="btn-primary">
+                🔄 手動同步模型
+              </button>
+              <button id="checkSyncStatusBtn" class="btn-tertiary">
+                🔍 檢查狀態
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 可用模型顯示 -->
+        <div class="settings-group">
+          <h4>📋 可用模型列表</h4>
+          <div class="models-list-container">
+            <div id="modelsListDisplay" class="models-display">
+              <div class="models-placeholder">載入模型列表中...</div>
+            </div>
+            <div class="models-info">
+              <span id="modelsCount">模型數量：檢查中</span>
+              <span id="modelsLastUpdate">最後更新：檢查中</span>
+            </div>
+            <button id="refreshModelsBtn" class="btn-secondary">
+              📋 重新載入模型列表
+            </button>
+          </div>
+        </div>
+
+        <!-- 手動同步說明 -->
+        <div class="settings-group">
+          <h4>💡 同步說明</h4>
+          <div class="setting-row">
+            <div class="sync-interval-info">
+              <span>手動同步模式</span>
+              <small>擴展不會自動同步模型，需要手動觸發同步以獲取最新模型列表</small>
+            </div>
+          </div>
+          <div class="setting-row">
+            <div class="sync-interval-info">
+              <span>同步過程</span>
+              <small>同步時會開啟新的 Gemini 視窗來檢測可用模型，完成後自動關閉</small>
+            </div>
+          </div>
+        </div>
+
+        <div id="syncActionStatus" class="sync-status"></div>
+      </div>
+    </div>
+    
+    <div class="feature-list">
+      <h3>功能特色：</h3>
+      <ul>
+        <li>✅ 自動檢測 Slack 討論串</li>
+        <li>✅ 提取所有訊息內容</li>
+        <li>✅ 自動開啟 Gemini 並貼上訊息</li>
+        <li>✅ 智能格式化摘要請求</li>
+        <li>✅ 自定義 AI提示詞</li>
+        <li>🆕 摘要時選擇 Gemini 模型</li>
+        <li>🆕 智能訊息收集與處理</li>
+        <li>🔄 手動同步 Gemini 模型列表</li>
+        <li>⚙️ 簡化的模型管理</li>
+      </ul>
+    </div>
+
+    <div class="usage-guide">
+      <h3>使用方法：</h3>
+      <ol>
+        <li>在 Slack 網頁版中開啟任何討論串</li>
+        <li>點擊出現的「📝 摘要此討論串」按鈕</li>
+        <li>在預覽頁面選擇適合的 Gemini 模型</li>
+        <li>確認摘要，等待 Gemini 自動開啟並貼上訊息</li>
+        <li>查看 Gemini 生成的摘要結果</li>
+        <li>💡 在「🔄 模型同步」標籤中管理 Gemini 模型同步</li>
+      </ol>
+    </div>
+
+    <div class="status-container">
+      <div id="slackStatus" class="status-indicator">
+        <span id="statusIcon">⏳</span>
+        <span id="statusText">檢查 Slack 頁面...</span>
+      </div>
+    </div>
+
+    <div class="footer">
+      <p>💡 提示：確保您已經登入 Slack 和 Gemini</p>
+    </div>
+  </div>
+
+  <!-- Syncing Modal Overlay -->
+  <div id="syncingModal" class="modal-overlay hidden">
+    <div class="modal-container">
+      <div class="modal-header">
+        <div class="sync-icon-container">
+          <div class="sync-spinner">🔄</div>
+        </div>
+        <h2>正在同步 Gemini 模型</h2>
+      </div>
+      
+      <div class="modal-body">
+        <div class="sync-progress">
+          <div class="progress-steps">
+            <div class="step" id="step1">
+              <span class="step-icon">⏳</span>
+              <span class="step-text">開啟 Gemini 頁面...</span>
+            </div>
+            <div class="step" id="step2">
+              <span class="step-icon">⏳</span>
+              <span class="step-text">等待頁面載入...</span>
+            </div>
+            <div class="step" id="step3">
+              <span class="step-icon">⏳</span>
+              <span class="step-text">檢測可用模型...</span>
+            </div>
+            <div class="step" id="step4">
+              <span class="step-icon">⏳</span>
+              <span class="step-text">保存模型列表...</span>
+            </div>
+          </div>
+          
+          <div class="sync-details">
+            <p class="sync-message" id="syncMessage">
+              正在開啟 Gemini 頁面進行模型同步，請稍候...
+            </p>
+            <div class="sync-timer">
+              <span id="syncTimer">已用時間: 0 秒</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="modal-footer">
+        <div class="sync-warning">
+          <p>⚠️ 同步過程中請勿關閉此視窗</p>
+          <p>🔄 同步完成後會自動關閉 Gemini 頁面</p>
+        </div>
+        <button id="cancelSyncBtn" class="btn-secondary" disabled>
+          ❌ 取消同步
+        </button>
+      </div>
+    </div>
+  </div>
+  
+  <script src="popup.js"></script>
+</body>
+</html> 

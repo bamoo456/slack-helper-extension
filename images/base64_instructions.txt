@@ -1,0 +1,30 @@
+Instructions for creating PNG files from the SVG files:
+
+1. Open the SVG files (icon.svg and default-favicon.svg) in a web browser
+
+2. Take screenshots of the icons at the following sizes:
+   - icon16.png: 16x16 pixels
+   - icon48.png: 48x48 pixels
+   - icon128.png: 128x128 pixels (direct screenshot of icon.svg)
+   - default-favicon.png: 16x16 pixels (direct screenshot of default-favicon.svg)
+
+3. Use online tools:
+   - Visit https://svgtopng.com/ or https://cloudconvert.com/svg-to-png
+   - Upload the SVG files and convert to the required sizes
+
+4. Use the SVG directly:
+   You can modify the manifest.json to use SVG directly instead of PNG files:
+   
+   ```json
+   "default_icon": {
+     "16": "icon.svg",
+     "48": "icon.svg",
+     "128": "icon.svg"
+   }
+   ```
+   
+   Some modern browsers support SVG icons directly in Chrome extensions.
+
+5. Use online icon generators:
+   - Visit https://favicon.io/ or https://www.designevo.com/logo-maker/
+   - Create a custom icon and download in required sizes 
