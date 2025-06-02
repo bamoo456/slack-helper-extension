@@ -327,11 +327,22 @@ class SlackThreadExtractor {
   }
 }
 
+/**
+ * 檢查是否為 Slack 頁面
+ */
+function isSlackPage() {
+  return window.location.hostname.includes('slack.com');
+}
+
 // Initialize the main extractor
 let slackThreadExtractor = null;
 
 // Initialize when DOM is ready
 function initializeExtractor() {
+  if (!isSlackPage()) {
+    console.log('Detected non-Slack page, skipping initialization');
+    return;
+  }
   if (!slackThreadExtractor) {
     slackThreadExtractor = new SlackThreadExtractor();
     
@@ -352,7 +363,7 @@ if (document.readyState === 'loading') {
 
 // Also try to initialize after a short delay to ensure Slack's dynamic content is loaded
 setTimeout(() => {
-  if (!slackThreadExtractor) {
+  if (!slackThreadExtractor && isSlackPage()) {
     console.log('Retrying initialization after delay...');
     initializeExtractor();
   }

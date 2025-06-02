@@ -651,8 +651,6 @@ export function pasteMessagesIntoGemini(messages) {
  */
 export async function switchGeminiModelAndPasteMessages(tabId, selectedModel, messages) {
   try {
-    // 確保頁面完全準備就緒
-    await waitForGeminiPageReady(tabId);
     console.log('✅ 頁面已準備就緒，開始切換模型並貼上訊息...');
     
     const modelDisplayName = getGeminiModelDisplayName(selectedModel);
