@@ -991,18 +991,15 @@ export async function getAvailableModels() {
       
       const syncedModels = result.availableGeminiModels || [];
       const lastUpdated = result.modelsLastUpdated || 0;
-      const now = Date.now();
-      const maxAge = 24 * 60 * 60 * 1000; // 24 小時
       
       console.log('📊 Gemini Utils: Storage analysis:', {
         syncedModelsCount: syncedModels.length,
         lastUpdated: new Date(lastUpdated).toISOString(),
-        hoursAgo: Math.floor((now - lastUpdated) / (1000 * 60 * 60)),
-        isValid: syncedModels.length > 0 && (now - lastUpdated) < maxAge
+        hasStoredModels: syncedModels.length > 0
       });
       
-      // 如果有有效的同步模型，使用它們
-      if (syncedModels.length > 0 && (now - lastUpdated) < maxAge) {
+      // 如果有儲存的模型，直接使用它們（不檢查時間）
+      if (syncedModels.length > 0) {
         console.log('✅ Gemini Utils: Using synced models:', syncedModels.length, '個模型');
         console.log('📋 Gemini Utils: Synced models:', syncedModels);
         resolve(syncedModels);
