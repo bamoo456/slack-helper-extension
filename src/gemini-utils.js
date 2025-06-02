@@ -25,8 +25,6 @@ export const GEMINI_MODELS_CONFIG = {
  */
 export class BackgroundModelSyncManager {
   constructor() {
-    this.syncInterval = null;
-    this.syncIntervalMs = 30 * 60 * 1000; // 30 分鐘同步一次
     this.isSyncing = false;
     this.lastSyncTime = 0;
     this.minSyncInterval = 10 * 60 * 1000; // 最小同步間隔 10 分鐘
@@ -37,44 +35,6 @@ export class BackgroundModelSyncManager {
    */
   initialize() {
     console.log('初始化背景模型同步管理器');
-    
-    // 立即檢查是否需要同步
-    this.checkAndSync();
-    
-    // 設置定期同步
-    this.startPeriodicSync();
-    
-    // 監聽擴充功能啟動事件
-    this.setupEventListeners();
-  }
-
-  /**
-   * 設置事件監聽器
-   */
-  setupEventListeners() {
-    // 監聽 alarm 事件（用於定期同步）
-    chrome.alarms.onAlarm.addListener((alarm) => {
-      if (alarm.name === 'modelSync') {
-        console.log('定期模型同步觸發');
-        this.checkAndSync();
-      }
-    });
-  }
-
-  /**
-   * 開始定期同步
-   */
-  startPeriodicSync() {
-    // 清除現有的 alarm
-    chrome.alarms.clear('modelSync');
-    
-    // 創建新的 alarm，每 30 分鐘觸發一次
-    chrome.alarms.create('modelSync', {
-      delayInMinutes: 30,
-      periodInMinutes: 30
-    });
-    
-    console.log('背景定期同步已設置（每 30 分鐘）');
   }
 
   /**
@@ -296,7 +256,6 @@ export class BackgroundModelSyncManager {
    * 停止背景同步
    */
   stop() {
-    chrome.alarms.clear('modelSync');
     this.isSyncing = false;
     console.log('背景模型同步已停止');
   }

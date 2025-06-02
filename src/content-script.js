@@ -8,7 +8,8 @@ import { MessageTextExtractor } from './message-extractor.js';
 import { MessageProcessor } from './message-processor.js';
 import { ThreadScrollCollector } from './scroll-collector.js';
 import { SummaryButtonManager, ThreadAnalyzer, PreviewModalManager, PageObserver } from './ui-components.js';
-import { initializeModelSync, isGeminiPage } from './model-sync.js';
+import { isGeminiPage } from './model-sync.js';
+
 
 console.log('Slack Helper content script loaded (webpack bundled)');
 
@@ -67,6 +68,11 @@ class SlackThreadExtractor {
   addSummaryButton() {
     if (!this.initialized) {
       console.log('Extension not yet initialized, skipping button addition');
+      return;
+    }
+
+    if (isGeminiPage()) {
+      console.log('Detected Gemini page, skipping button addition');
       return;
     }
     
@@ -318,17 +324,6 @@ class SlackThreadExtractor {
     console.log('Thread container:', this.findThreadContainer());
     console.log('Message elements:', this.domDetector.findMessageElements(true));
     console.log('=====================================');
-  }
-}
-
-// Check if this is a Gemini page and initialize model sync if needed
-if (isGeminiPage()) {
-  console.log('Detected Gemini page, initializing model sync...');
-  try {
-    initializeModelSync();
-    console.log('✅ Model sync initialized successfully');
-  } catch (error) {
-    console.error('❌ Failed to initialize model sync:', error);
   }
 }
 

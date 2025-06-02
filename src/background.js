@@ -248,15 +248,9 @@ chrome.runtime.onInstalled.addListener((details) => {
   backgroundSyncManager.initialize();
   
   if (details.reason === 'install') {
-    console.log('首次安裝，將在 5 分鐘後進行首次模型同步');
-    // 首次安裝時，5 分鐘後進行首次同步
-    chrome.alarms.create('firstSync', { delayInMinutes: 5 });
+    console.log('首次安裝完成');
   } else if (details.reason === 'update') {
-    console.log('擴充功能更新，立即檢查模型同步');
-    // 更新時立即檢查同步
-    setTimeout(() => {
-      backgroundSyncManager.checkAndSync();
-    }, 10000); // 10 秒後執行
+    console.log('擴充功能更新完成');
   }
 });
 
@@ -264,12 +258,4 @@ chrome.runtime.onInstalled.addListener((details) => {
 chrome.runtime.onStartup.addListener(() => {
   console.log('Chrome 啟動，初始化背景模型同步');
   backgroundSyncManager.initialize();
-});
-
-// 監聽首次同步 alarm
-chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name === 'firstSync') {
-    console.log('執行首次模型同步');
-    backgroundSyncManager.manualSync();
-  }
 }); 
