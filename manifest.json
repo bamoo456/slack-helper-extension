@@ -15,8 +15,7 @@
     "tabs",
     "activeTab",
     "scripting",
-    "storage",
-    "alarms"
+    "storage"
   ],
   "host_permissions": [
     "*://*.slack.com/*",
