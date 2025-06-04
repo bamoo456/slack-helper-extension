@@ -204,6 +204,29 @@ export class SummaryButtonManager {
     });
     return existingButtons.length;
   }
+
+  /**
+   * 重新載入翻譯並更新現有按鈕
+   */
+  async reloadTranslationsAndUpdateButtons() {
+    try {
+      // 重新載入翻譯
+      this.translations = await this.loadCurrentTranslations();
+      
+      // 更新所有現有的摘要按鈕
+      const existingButtons = document.querySelectorAll(`.${this.buttonClass}`);
+      existingButtons.forEach(button => {
+        // 只更新處於預設狀態的按鈕（不是載入中或其他狀態）
+        if (!button.disabled) {
+          button.innerHTML = this.translations?.ui?.summaryButton || '📝 摘要此討論串';
+        }
+      });
+      
+      console.log(`Updated ${existingButtons.length} summary buttons with new language`);
+    } catch (error) {
+      console.error('Failed to reload translations and update buttons:', error);
+    }
+  }
 }
 
 /**

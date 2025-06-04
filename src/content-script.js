@@ -49,12 +49,53 @@ class SlackThreadExtractor {
       this.initialized = true;
       console.log('✅ SlackThreadExtractor initialized successfully');
       
+      // 設置語言變更監聽器
+      this.setupLanguageChangeListener();
+      
       // Start observing for thread changes
       this.startObserving();
       
     } catch (error) {
       console.error('❌ Failed to initialize SlackThreadExtractor:', error);
       this.initialized = false;
+    }
+  }
+
+  /**
+   * 設置語言變更監聽器
+   */
+  setupLanguageChangeListener() {
+    // 監聽來自 background script 的語言變更通知
+    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+      if (request.action === 'languageChanged') {
+        console.log('Language changed, updating summary buttons...');
+        this.handleLanguageChange();
+        sendResponse({ success: true });
+      }
+    });
+  }
+
+  /**
+   * 處理語言變更
+   */
+  async handleLanguageChange() {
+    try {
+      // 重新載入按鈕管理器的翻譯並更新按鈕
+      await this.buttonManager.reloadTranslationsAndUpdateButtons();
+      
+      // 如果有預覽模態框管理器，也重新載入其翻譯
+      if (this.previewModal) {
+        await this.previewModal.initializeTranslations();
+      }
+      
+      // 如果有線程分析器，也重新載入其翻譯
+      if (this.threadAnalyzer) {
+        await this.threadAnalyzer.initializeTranslations();
+      }
+      
+      console.log('✅ Language change handled successfully');
+    } catch (error) {
+      console.error('❌ Error handling language change:', error);
     }
   }
 

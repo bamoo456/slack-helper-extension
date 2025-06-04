@@ -83,8 +83,43 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
   if (namespace === 'local' && changes.selectedLanguage) {
     console.log('Language changed, reloading translations...');
     loadTranslations();
+    
+    // 廣播語言變更消息給所有 content script
+    broadcastLanguageChange(changes.selectedLanguage.newValue);
   }
 });
+
+/**
+ * 廣播語言變更消息給所有活動的標籤頁
+ */
+async function broadcastLanguageChange(newLanguage) {
+  try {
+    // 獲取所有標籤頁
+    const tabs = await chrome.tabs.query({});
+    
+    // 向每個標籤頁發送語言變更消息
+    const promises = tabs.map(async (tab) => {
+      try {
+        // 只向 Slack 頁面發送消息
+        if (tab.url && tab.url.includes('slack.com')) {
+          await chrome.tabs.sendMessage(tab.id, {
+            action: 'languageChanged',
+            newLanguage: newLanguage
+          });
+          console.log(`Language change notification sent to tab ${tab.id}`);
+        }
+      } catch (error) {
+        // 忽略無法發送消息的標籤頁（可能沒有 content script）
+        console.log(`Could not send language change to tab ${tab.id}:`, error.message);
+      }
+    });
+    
+    await Promise.allSettled(promises);
+    console.log('Language change notifications sent to all applicable tabs');
+  } catch (error) {
+    console.error('Error broadcasting language change:', error);
+  }
+}
 
 // 創建背景同步管理器實例
 const backgroundSyncManager = new BackgroundModelSyncManager();
