@@ -28,12 +28,100 @@ export class SummaryButtonManager {
       height: '28px',
       flexShrink: '0' // 防止按鈕被壓縮
     };
+    // 初始化翻譯
+    this.translations = null;
+    this.initializeTranslations();
   }
 
-  createSummaryButton(clickHandler) {
+  /**
+   * 初始化翻譯系統
+   */
+  async initializeTranslations() {
+    try {
+      this.translations = await this.loadCurrentTranslations();
+    } catch (error) {
+      console.warn('Failed to load translations for SummaryButtonManager:', error);
+      this.translations = this.getFallbackTranslations();
+    }
+  }
+
+  /**
+   * 載入當前語言的翻譯
+   * @returns {Promise<Object>} 翻譯對象
+   */
+  async loadCurrentTranslations() {
+    const isChromeExtensionContext = this.isValidChromeExtensionContext();
+    
+    if (isChromeExtensionContext) {
+      // 獲取當前選擇的語言
+      const selectedLanguage = await this.getCurrentLanguage();
+      
+      // 載入對應語言的翻譯文件
+      const response = await fetch(chrome.runtime.getURL(`locales/${selectedLanguage}/translation.json`));
+      return await response.json();
+    }
+    
+    return this.getFallbackTranslations();
+  }
+
+  /**
+   * 獲取當前選擇的語言
+   * @returns {Promise<string>} 語言代碼
+   */
+  async getCurrentLanguage() {
+    return new Promise((resolve) => {
+      chrome.storage.local.get(['selectedLanguage'], (result) => {
+        if (chrome.runtime.lastError) {
+          console.warn('Error getting current language:', chrome.runtime.lastError);
+          resolve('zh-TW'); // 預設語言
+        } else {
+          resolve(result.selectedLanguage || 'zh-TW');
+        }
+      });
+    });
+  }
+
+  /**
+   * 獲取備用翻譯（中文版本）
+   * @returns {Object} 備用翻譯對象
+   */
+  getFallbackTranslations() {
+    return {
+      ui: {
+        summaryButton: '📝 摘要此討論串',
+        loading: '⏳ 正在分析討論串...',
+        opening: '🚀 正在開啟 Gemini...',
+        success: '✅ 已開啟 Gemini',
+        error: '❌ 錯誤'
+      }
+    };
+  }
+
+  /**
+   * 檢查 Chrome 擴展環境是否有效
+   * @returns {boolean} 是否為有效的 Chrome 擴展環境
+   */
+  isValidChromeExtensionContext() {
+    try {
+      return typeof chrome !== 'undefined' && 
+             chrome.storage && 
+             chrome.storage.local && 
+             chrome.runtime && 
+             chrome.runtime.id;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  async createSummaryButton(clickHandler) {
+    // 確保翻譯已載入
+    if (!this.translations) {
+      await this.initializeTranslations();
+    }
+    
     const button = document.createElement('button');
     button.className = this.buttonClass;
-    button.innerHTML = '📝 摘要此討論串';
+    button.innerHTML = this.translations?.ui?.summaryButton || '📝 摘要此討論串';
     
     Object.assign(button.style, this.buttonStyles);
     this.addButtonEventListeners(button, clickHandler);
@@ -50,13 +138,33 @@ export class SummaryButtonManager {
     button.addEventListener('click', clickHandler);
   }
 
-  updateButtonState(button, state, text) {
+  async updateButtonState(button, state, text) {
+    // 確保翻譯已載入
+    if (!this.translations) {
+      await this.initializeTranslations();
+    }
+
     const states = {
-      loading: { text: '⏳ 正在分析討論串...', disabled: true },
-      opening: { text: '🚀 正在開啟 Gemini...', disabled: true },
-      success: { text: '✅ 已開啟 Gemini', disabled: true },
-      error: { text: '❌ 錯誤', disabled: true },
-      default: { text: '📝 摘要此討論串', disabled: false }
+      loading: { 
+        text: this.translations?.ui?.loading || '⏳ 正在分析討論串...', 
+        disabled: true 
+      },
+      opening: { 
+        text: this.translations?.ui?.opening || '🚀 正在開啟 Gemini...', 
+        disabled: true 
+      },
+      success: { 
+        text: this.translations?.ui?.success || '✅ 已開啟 Gemini', 
+        disabled: true 
+      },
+      error: { 
+        text: this.translations?.ui?.error || '❌ 錯誤', 
+        disabled: true 
+      },
+      default: { 
+        text: this.translations?.ui?.summaryButton || '📝 摘要此討論串', 
+        disabled: false 
+      }
     };
 
     const stateConfig = states[state] || states.default;
@@ -65,8 +173,8 @@ export class SummaryButtonManager {
   }
 
   resetButtonAfterDelay(button, delay = 2000) {
-    setTimeout(() => {
-      this.updateButtonState(button, 'default');
+    setTimeout(async () => {
+      await this.updateButtonState(button, 'default');
     }, delay);
   }
 
@@ -104,7 +212,111 @@ export class SummaryButtonManager {
  */
 export class ThreadAnalyzer {
   constructor() {
-    this.defaultSystemPrompt = `請幫我總結以下 Slack 討論串的內容（以 Markdown 格式提供）：
+    this.translations = null;
+    this.initializeTranslations();
+  }
+
+  async initializeTranslations() {
+    try {
+      this.translations = await this.loadCurrentTranslations();
+    } catch (error) {
+      console.warn('Failed to load translations for ThreadAnalyzer:', error);
+      this.translations = this.getFallbackTranslations();
+    }
+  }
+
+  async loadCurrentTranslations() {
+    const isChromeExtensionContext = this.isValidChromeExtensionContext();
+    
+    if (isChromeExtensionContext) {
+      const selectedLanguage = await this.getCurrentLanguage();
+      const response = await fetch(chrome.runtime.getURL(`locales/${selectedLanguage}/translation.json`));
+      return await response.json();
+    }
+    
+    return this.getFallbackTranslations();
+  }
+
+  getFallbackTranslations() {
+    return {
+      ui: {
+        unknownTime: '未知時間',
+        lengthShort: '簡短討論',
+        lengthMedium: '中等長度',
+        lengthLong: '長篇討論'
+      }
+    };
+  }
+
+  /**
+   * 獲取當前語言的預設系統提示詞
+   * @returns {Promise<string>} 預設系統提示詞
+   */
+  async getDefaultSystemPrompt() {
+    try {
+      const isChromeExtensionContext = this.isValidChromeExtensionContext();
+      
+      if (isChromeExtensionContext) {
+        // 獲取當前選擇的語言
+        const selectedLanguage = await this.getCurrentLanguage();
+        
+        // 載入對應語言的翻譯文件
+        const translations = await this.loadTranslations(selectedLanguage);
+        
+        if (translations && translations.prompt && translations.prompt.defaultSystemPrompt) {
+          console.log('✅ Using i18n default system prompt for language:', selectedLanguage);
+          return translations.prompt.defaultSystemPrompt;
+        }
+      }
+      
+      // 如果無法獲取翻譯，使用中文備用版本
+      console.log('⚠️ Using fallback default system prompt');
+      return this.getFallbackDefaultPrompt();
+      
+    } catch (error) {
+      console.warn('❌ Error getting default system prompt:', error);
+      return this.getFallbackDefaultPrompt();
+    }
+  }
+
+  /**
+   * 獲取當前選擇的語言
+   * @returns {Promise<string>} 語言代碼
+   */
+  async getCurrentLanguage() {
+    return new Promise((resolve) => {
+      chrome.storage.local.get(['selectedLanguage'], (result) => {
+        if (chrome.runtime.lastError) {
+          console.warn('Error getting current language:', chrome.runtime.lastError);
+          resolve('zh-TW'); // 預設語言
+        } else {
+          resolve(result.selectedLanguage || 'zh-TW');
+        }
+      });
+    });
+  }
+
+  /**
+   * 載入指定語言的翻譯文件
+   * @param {string} language - 語言代碼
+   * @returns {Promise<Object>} 翻譯對象
+   */
+  async loadTranslations(language) {
+    try {
+      const response = await fetch(chrome.runtime.getURL(`locales/${language}/translation.json`));
+      return await response.json();
+    } catch (error) {
+      console.warn('Error loading translations for language:', language, error);
+      return null;
+    }
+  }
+
+  /**
+   * 獲取備用的預設系統提示詞（中文版本）
+   * @returns {string} 備用提示詞
+   */
+  getFallbackDefaultPrompt() {
+    return `請幫我總結以下 Slack 討論串的內容（以 Markdown 格式提供）：
 
 **注意：以下內容使用 Markdown 格式，包含可點擊的鏈接和用戶提及**
 
@@ -123,7 +335,12 @@ export class ThreadAnalyzer {
 *請在回應中保留 Markdown 格式，特別是鏈接和用戶提及*`;
   }
 
-  analyzeThread(messages) {
+  async analyzeThread(messages) {
+    // 確保翻譯已載入
+    if (!this.translations) {
+      await this.initializeTranslations();
+    }
+    
     const participants = [...new Set(messages.map(msg => msg.user).filter(Boolean))];
     const messageCount = messages.length;
     const timeRange = this.calculateTimeRange(messages);
@@ -141,12 +358,12 @@ export class ThreadAnalyzer {
     const timestamps = messages.map(msg => msg.timestamp).filter(Boolean);
     return timestamps.length > 1 ? 
       `${timestamps[0]} - ${timestamps[timestamps.length - 1]}` : 
-      timestamps[0] || '未知時間';
+      timestamps[0] || this.translations?.ui?.unknownTime || '未知時間';
   }
 
   estimateLength(messages) {
     const totalChars = messages.reduce((sum, msg) => sum + (msg.text || '').length, 0);
-    return totalChars > 2000 ? '長篇討論' : totalChars > 500 ? '中等長度' : '簡短討論';
+    return totalChars > 2000 ? this.translations?.ui?.lengthLong || '長篇討論' : totalChars > 500 ? this.translations?.ui?.lengthMedium || '中等長度' : this.translations?.ui?.lengthShort || '簡短討論';
   }
 
   generatePreviewText(messages) {
@@ -175,6 +392,9 @@ export class ThreadAnalyzer {
       const customPrompt = await this.getCustomSystemPrompt();
       console.log('📝 Custom prompt retrieved:', customPrompt ? `Yes (${customPrompt.length} chars)` : 'No');
       
+      // Get default system prompt (now async)
+      const defaultSystemPrompt = await this.getDefaultSystemPrompt();
+      
       // Format messages with numbering like the original
       const messageText = messages.map((msg, index) => {
         return `${index + 1}. **${msg.user}** (${msg.timestamp}):\n${msg.text}\n`;
@@ -183,7 +403,7 @@ export class ThreadAnalyzer {
       console.log('📊 Formatted message stats:', {
         messageCount: messages.length,
         totalLength: messageText.length,
-        promptLength: customPrompt ? customPrompt.length : this.defaultSystemPrompt.length
+        promptLength: customPrompt ? customPrompt.length : defaultSystemPrompt.length
       });
       
       if (customPrompt && customPrompt.trim()) {
@@ -195,7 +415,7 @@ export class ThreadAnalyzer {
         return result;
       } else {
         console.log('Using default system prompt');
-        const result = this.defaultSystemPrompt.replace('{MESSAGES}', messageText);
+        const result = defaultSystemPrompt.replace('{MESSAGES}', messageText);
         console.log('📤 Final formatted message length:', result.length);
         return result;
       }
@@ -209,7 +429,8 @@ export class ThreadAnalyzer {
         return `${index + 1}. **${msg.user}** (${msg.timestamp}):\n${msg.text}\n`;
       }).join('\n');
       
-      const result = this.defaultSystemPrompt.replace('{MESSAGES}', messageText);
+      const fallbackPrompt = this.getFallbackDefaultPrompt();
+      const result = fallbackPrompt.replace('{MESSAGES}', messageText);
       console.log('📤 Final formatted message length:', result.length);
       return result;
     }
@@ -294,40 +515,109 @@ export class PreviewModalManager {
   constructor() {
     this.modalClass = 'slack-helper-modal';
     this.modalContentClass = 'slack-helper-modal-content';
+    this.translations = null;
+    this.initializeTranslations();
+  }
+
+  async initializeTranslations() {
+    try {
+      this.translations = await this.loadCurrentTranslations();
+    } catch (error) {
+      console.warn('Failed to load translations for PreviewModalManager:', error);
+      this.translations = this.getFallbackTranslations();
+    }
+  }
+
+  async loadCurrentTranslations() {
+    const isChromeExtensionContext = this.isValidChromeExtensionContext();
+    
+    if (isChromeExtensionContext) {
+      const selectedLanguage = await this.getCurrentLanguage();
+      const response = await fetch(chrome.runtime.getURL(`locales/${selectedLanguage}/translation.json`));
+      return await response.json();
+    }
+    
+    return this.getFallbackTranslations();
+  }
+
+  async getCurrentLanguage() {
+    return new Promise((resolve) => {
+      chrome.storage.local.get(['selectedLanguage'], (result) => {
+        if (chrome.runtime.lastError) {
+          console.warn('Error getting current language:', chrome.runtime.lastError);
+          resolve('zh-TW');
+        } else {
+          resolve(result.selectedLanguage || 'zh-TW');
+        }
+      });
+    });
+  }
+
+  getFallbackTranslations() {
+    return {
+      ui: {
+        previewTitle: '📝 討論串摘要預覽',
+        participants: '👥 參與者:',
+        participantsCount: '{{count}} 人',
+        messageCount: '💬 訊息數:',
+        messagesCount: '{{count}} 條',
+        estimatedLength: '預估長度: {{length}}',
+        timeRange: '⏰ 時間範圍:',
+        selectModel: '🤖 選擇 Gemini 模型：',
+        syncTip: '💡 更多同步選項請查看擴展設定',
+        participantsList: '👥 參與者列表：',
+        threadPreview: '📄 討論串預覽：',
+        copyToClipboard: '📋 複製到剪貼簿',
+        copied: '✅ 已複製',
+        cancel: '❌ 取消',
+        confirm: '✅ 確認摘要'
+      }
+    };
   }
 
   async showThreadPreview(messages) {
+    // 確保翻譯已載入
+    if (!this.translations) {
+      await this.initializeTranslations();
+    }
+    
     return new Promise((resolve) => {
       this.createPreviewModal(messages, resolve);
     });
   }
 
   async createPreviewModal(messages, resolve) {
+    // 確保翻譯已載入
+    if (!this.translations) {
+      await this.initializeTranslations();
+    }
+    
     const analyzer = new ThreadAnalyzer();
-    const threadInfo = analyzer.analyzeThread(messages);
+    const threadInfo = await analyzer.analyzeThread(messages);
     
     const modal = document.createElement('div');
     modal.className = this.modalClass;
     this.applyModalStyles(modal);
-
+    
     const modalContent = document.createElement('div');
     modalContent.className = this.modalContentClass;
     this.applyModalContentStyles(modalContent);
-
-    // 獲取可用模型列表並生成 HTML
-    let availableModels = await this.getAvailableModels();
-    console.log('🔍 PreviewModalManager.createPreviewModal: Available models:', availableModels);
-    availableModels = [...this.getFallbackModels(), ...availableModels];
+    
+    // 獲取可用模型列表
+    const availableModels = await this.getAvailableModels();
+    
     modalContent.innerHTML = this.generateModalHTML(threadInfo, messages, analyzer, availableModels);
+    
     modal.appendChild(modalContent);
-
+    document.body.appendChild(modal);
+    
+    // 添加事件監聽器
     this.addModalEventListeners(modal, modalContent, resolve, messages, availableModels);
     
-    // 添加到頁面並顯示動畫
-    document.body.appendChild(modal);
+    // 顯示動畫
     setTimeout(() => {
       modal.style.opacity = '1';
-      modal.querySelector(`.${this.modalContentClass}`).style.transform = 'translateY(0)';
+      modalContent.style.transform = 'translateY(0)';
     }, 10);
   }
 
@@ -355,10 +645,13 @@ export class PreviewModalManager {
               console.warn('❌ Chrome runtime error:', chrome.runtime.lastError);
               console.log('🔄 Using fallback models due to runtime error');
               resolve(this.getFallbackModels());
-            } else if (response && response.models) {
+            } else if (response && response.models && Array.isArray(response.models)) {
               console.log('✅ Got models from background script:', response.models.length, '個模型');
               console.log('📋 Models list:', response.models);
-              resolve(response.models);
+              
+              // 確保 auto 模型總是存在
+              const modelsWithAuto = this.ensureAutoModelExists(response.models);
+              resolve(modelsWithAuto);
             } else {
               console.warn('⚠️ Background script returned invalid response:', response);
               console.log('🔄 Using fallback models due to invalid response');
@@ -378,15 +671,41 @@ export class PreviewModalManager {
   }
 
   /**
+   * 確保模型列表中包含 auto 模型
+   * @param {Array} models 原始模型列表
+   * @returns {Array} 包含 auto 模型的列表
+   */
+  ensureAutoModelExists(models) {
+    // 檢查是否已經有 auto 模型
+    const hasAutoModel = models.some(model => model.value === 'auto');
+    
+    if (hasAutoModel) {
+      console.log('✅ Auto model already exists in the list');
+      return models;
+    }
+    
+    // 如果沒有 auto 模型，添加它
+    console.log('➕ Adding auto model to the list');
+    const autoModelText = this.translations?.ui?.autoModel || '🔄 自動 (使用 Gemini 頁面預設模型)';
+    const autoModel = {
+      value: 'auto',
+      displayName: autoModelText
+    };
+    
+    // 將 auto 模型放在列表的第一位
+    return [autoModel, ...models];
+  }
+
+  /**
    * 獲取備用模型列表
    * @returns {Array} 備用模型列表
    */
   getFallbackModels() {
+    const autoModelText = this.translations?.ui?.autoModel || '🔄 自動 (使用 Gemini 頁面預設模型)';
     return [
       {
         value: 'auto',
-        displayName: '🔄 自動 (使用 Gemini 頁面預設模型)',
-        description: '🔄 不切換模型，使用 Gemini 頁面當前的預設模型'
+        displayName: autoModelText
       }
     ];
   }
@@ -400,9 +719,6 @@ export class PreviewModalManager {
     const options = availableModels.map(model => 
       `<option value="${model.value}">${model.displayName}</option>`
     ).join('');
-
-    // 獲取第一個模型的描述作為預設描述
-    const defaultDescription = availableModels.length > 0 ? availableModels[0].description : '🔄 不切換模型，使用 Gemini 頁面當前的預設模型';
 
     return `
       <select id="geminiModelSelect" style="
@@ -418,9 +734,6 @@ export class PreviewModalManager {
       ">
         ${options}
       </select>
-      <div id="modelDescription" style="font-size: 13px; color: rgba(255,255,255,0.9); font-weight: 500; background: rgba(255,255,255,0.1); padding: 8px; border-radius: 4px;">
-        ${defaultDescription}
-      </div>
     `;
   }
 
@@ -458,18 +771,18 @@ export class PreviewModalManager {
   generateModalHTML(threadInfo, messages, analyzer, availableModels) {
     return `
       <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; margin: -24px -24px 20px -24px; border-radius: 12px 12px 0 0;">
-        <h2 style="margin: 0 0 16px 0; font-size: 24px; font-weight: 600;">📝 討論串摘要預覽</h2>
+        <h2 style="margin: 0 0 16px 0; font-size: 24px; font-weight: 600;">${this.translations?.ui?.previewTitle || '📝 討論串摘要預覽'}</h2>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; font-size: 14px;">
           <div>
-            <strong>👥 參與者:</strong> ${threadInfo.participants.length} 人<br>
+            <strong>${this.translations?.ui?.participants || '👥 參與者:'}</strong> ${this.translations?.ui?.participantsCount ? this.translations.ui.participantsCount.replace('{{count}}', threadInfo.participants.length) : threadInfo.participants.length + ' 人'}<br>
             <small style="opacity: 0.9;">${threadInfo.participants.slice(0, 3).join(', ')}${threadInfo.participants.length > 3 ? '...' : ''}</small>
           </div>
           <div>
-            <strong>💬 訊息數:</strong> ${threadInfo.messageCount} 條<br>
-            <small style="opacity: 0.9;">預估長度: ${threadInfo.estimatedLength}</small>
+            <strong>${this.translations?.ui?.messageCount || '💬 訊息數:'}</strong> ${this.translations?.ui?.messagesCount ? this.translations.ui.messagesCount.replace('{{count}}', threadInfo.messageCount) : threadInfo.messageCount + ' 條'}<br>
+            <small style="opacity: 0.9;">${this.translations?.ui?.estimatedLength ? this.translations.ui.estimatedLength.replace('{{length}}', threadInfo.estimatedLength) : '預估長度: ' + threadInfo.estimatedLength}</small>
           </div>
           <div>
-            <strong>⏰ 時間範圍:</strong><br>
+            <strong>${this.translations?.ui?.timeRange || '⏰ 時間範圍:'}</strong><br>
             <small style="opacity: 0.9;">${threadInfo.timeRange}</small>
           </div>
         </div>
@@ -478,11 +791,11 @@ export class PreviewModalManager {
       <div style="margin-bottom: 20px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
           <h3 style="margin: 0; color: #4A154B; font-size: 16px;">
-            🤖 選擇 Gemini 模型：
+            ${this.translations?.ui?.selectModel || '🤖 選擇 Gemini 模型：'}
           </h3>
           <div style="display: flex; gap: 8px; align-items: center;">
             <div style="font-size: 12px; color: #666; padding: 4px 8px; background: #f8f9fa; border-radius: 4px;">
-              💡 更多同步選項請查看擴展設定
+              ${this.translations?.ui?.syncTip || '💡 更多同步選項請查看擴展設定'}
             </div>
           </div>
         </div>
@@ -493,7 +806,7 @@ export class PreviewModalManager {
 
       <div style="margin-bottom: 20px;">
         <h3 style="margin: 0 0 12px 0; color: #4A154B; font-size: 16px;">
-          👥 參與者列表：
+          ${this.translations?.ui?.participantsList || '👥 參與者列表：'}
         </h3>
         <div style="background: linear-gradient(135deg, #17a2b8, #138496); color: white; padding: 16px; border-radius: 8px; box-shadow: 0 4px 12px rgba(23, 162, 184, 0.3);">
           <div style="display: flex; flex-wrap: wrap; gap: 8px;">
@@ -509,7 +822,7 @@ export class PreviewModalManager {
       <div style="margin-bottom: 24px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
           <h3 style="margin: 0; color: #4A154B; font-size: 16px;">
-            📄 討論串預覽：
+            ${this.translations?.ui?.threadPreview || '📄 討論串預覽：'}
           </h3>
           <button id="copyToClipboard" style="
             background: #28a745;
@@ -521,7 +834,7 @@ export class PreviewModalManager {
             font-size: 13px;
             transition: background-color 0.2s;
           ">
-            📋 複製到剪貼簿
+            ${this.translations?.ui?.copyToClipboard || '📋 複製到剪貼簿'}
           </button>
         </div>
         <div style="background: linear-gradient(135deg, #6f42c1, #8e44ad); padding: 16px; border-radius: 8px; max-height: 400px; overflow-y: auto; font-size: 13px; line-height: 1.4; box-shadow: 0 4px 12px rgba(111, 66, 193, 0.3);">
@@ -540,7 +853,7 @@ export class PreviewModalManager {
           font-size: 14px;
           transition: background-color 0.2s;
         ">
-          ❌ 取消
+          ${this.translations?.ui?.cancel || '❌ 取消'}
         </button>
         <button id="confirmSummary" style="
           background: #4A154B;
@@ -552,7 +865,7 @@ export class PreviewModalManager {
           font-size: 14px;
           transition: background-color 0.2s;
         ">
-          ✅ 確認摘要
+          ${this.translations?.ui?.confirm || '✅ 確認摘要'}
         </button>
       </div>
     `;
@@ -563,7 +876,6 @@ export class PreviewModalManager {
     const cancelBtn = modalContent.querySelector('#cancelSummary');
     const copyBtn = modalContent.querySelector('#copyToClipboard');
     const modelSelect = modalContent.querySelector('#geminiModelSelect');
-    const modelDescription = modalContent.querySelector('#modelDescription');
 
     // 載入已選擇的模型
     this.loadSelectedModel(modelSelect, availableModels);
@@ -575,20 +887,6 @@ export class PreviewModalManager {
 
     // 模型選擇變更事件
     modelSelect.addEventListener('change', () => {
-      // 從可用模型列表中找到對應的描述
-      const selectedModelInfo = availableModels.find(model => model.value === modelSelect.value);
-      if (selectedModelInfo && selectedModelInfo.description) {
-        modelDescription.textContent = selectedModelInfo.description;
-      } else {
-        // 如果找不到，使用預設描述
-        const defaultDescriptions = {
-          'auto': '🔄 不切換模型，使用 Gemini 頁面當前的預設模型',
-          'gemini-2.5-flash': '⚡ 快速回應，適合一般摘要需求',
-          'gemini-2.5-pro': '🧠 進階分析能力，適合複雜討論和深度摘要'
-        };
-        modelDescription.textContent = defaultDescriptions[modelSelect.value] || defaultDescriptions['auto'];
-      }
-      
       // 儲存選擇的模型
       this.saveSelectedModel(modelSelect.value);
     });
@@ -610,9 +908,9 @@ export class PreviewModalManager {
     copyBtn.addEventListener('click', () => {
       const formattedText = this.formatMessagesForClipboard(messages);
       navigator.clipboard.writeText(formattedText).then(() => {
-        copyBtn.innerHTML = '✅ 已複製';
+        copyBtn.innerHTML = this.translations?.ui?.copied || '✅ 已複製';
         setTimeout(() => {
-          copyBtn.innerHTML = '📋 複製到剪貼簿';
+          copyBtn.innerHTML = this.translations?.ui?.copyToClipboard || '📋 複製到剪貼簿';
         }, 2000);
       });
     });
@@ -662,13 +960,6 @@ export class PreviewModalManager {
           const modelExists = availableModels.some(model => model.value === savedModel);
           if (modelExists) {
             modelSelect.value = savedModel;
-            
-            // 更新模型描述
-            const selectedModel = availableModels.find(model => model.value === savedModel);
-            const modelDescription = document.querySelector('#modelDescription');
-            if (selectedModel && modelDescription) {
-              modelDescription.textContent = selectedModel.description;
-            }
           } else {
             console.warn('儲存的模型不在可用列表中:', savedModel);
             // 使用第一個可用模型作為預設值

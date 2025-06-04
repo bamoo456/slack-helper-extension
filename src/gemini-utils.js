@@ -744,34 +744,30 @@ export function extractAvailableModels() {
         console.log(`檢測到模型選項 ${index + 1}: ${itemText}`);
         
         if (itemText && itemText.length > 0) {
-          // 嘗試解析模型名稱和描述
+          // 嘗試解析模型名稱
           let value = '';
           let displayName = itemText;
-          let description = '';
           
           // 根據文字內容推斷模型類型
           if (itemText.toLowerCase().includes('flash') || itemText.includes('2.5') && itemText.toLowerCase().includes('flash')) {
             value = 'gemini-2.5-flash';
-            description = '⚡ 快速回應，適合一般摘要需求';
             if (!displayName.includes('⚡')) {
               displayName = `⚡ ${displayName}`;
             }
           } else if (itemText.toLowerCase().includes('pro') || itemText.includes('2.5') && itemText.toLowerCase().includes('pro')) {
             value = 'gemini-2.5-pro';
-            description = '🧠 進階分析能力，適合複雜討論和深度摘要';
             if (!displayName.includes('🧠')) {
               displayName = `🧠 ${displayName}`;
             }
           } else {
             // 對於未知模型，使用文字內容作為 value
             value = itemText.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-            description = itemText;
+            displayName = itemText;
           }
           
           models.push({
             value: value,
             displayName: displayName,
-            description: description,
             originalText: itemText
           });
         }

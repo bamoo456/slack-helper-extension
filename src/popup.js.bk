@@ -137,9 +137,6 @@ document.addEventListener('DOMContentLoaded', function() {
       descriptionElement.textContent = translations.description;
     }
 
-    // 更新語言選項
-    updateLanguageOptions(translations);
-
     // 更新標籤頁
     const tabButtons = document.querySelectorAll('.tab-button');
     tabButtons.forEach((button, index) => {
@@ -171,23 +168,6 @@ document.addEventListener('DOMContentLoaded', function() {
     chrome.storage.local.get(['customSystemPrompt'], function(result) {
       const customPrompt = result.customSystemPrompt || '';
       updatePromptDisplay(customPrompt);
-    });
-
-    // 重新載入同步狀態和模型列表（使用新語言）
-    loadSyncStatus();
-    loadModelsList();
-  }
-
-  // 更新語言選項文字
-  function updateLanguageOptions(translations) {
-    const languageOptions = document.querySelectorAll('#languageSelect option');
-    languageOptions.forEach(option => {
-      const value = option.value;
-      if (value === 'zh-TW') {
-        option.textContent = '繁體中文';
-      } else if (value === 'en') {
-        option.textContent = 'English';
-      }
     });
   }
 
@@ -222,21 +202,12 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // 更新警告文字
-    const syncWarnings = document.querySelectorAll('.sync-warning p');
-    if (syncWarnings[0] && modalSection.warning1) {
-      syncWarnings[0].textContent = modalSection.warning1;
+    const warningElements = document.querySelectorAll('.sync-warning p');
+    if (warningElements[0] && modalSection.warning1) {
+      warningElements[0].textContent = modalSection.warning1;
     }
-    if (syncWarnings[1] && modalSection.warning2) {
-      syncWarnings[1].textContent = modalSection.warning2;
-    }
-
-    // 更新計時器文字（如果存在）
-    const syncTimer = document.getElementById('syncTimer');
-    if (syncTimer && modalSection.syncTimer) {
-      const currentTime = syncTimer.textContent.match(/\d+/);
-      if (currentTime) {
-        syncTimer.textContent = modalSection.syncTimer.replace('{{time}}', currentTime[0]);
-      }
+    if (warningElements[1] && modalSection.warning2) {
+      warningElements[1].textContent = modalSection.warning2;
     }
   }
 
@@ -266,12 +237,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (systemPromptInput) {
       systemPromptInput.placeholder = promptSection.placeholder;
-    }
-
-    // 更新 prompt 顯示區域的預設文字
-    const promptPlaceholder = document.querySelector('.prompt-placeholder');
-    if (promptPlaceholder) {
-      promptPlaceholder.textContent = promptSection.loading || '載入中...';
     }
   }
 
@@ -305,23 +270,6 @@ document.addEventListener('DOMContentLoaded', function() {
       if (label) label.textContent = labels[id];
     });
 
-    // 更新描述文字
-    const descriptions = {
-      'scrollDelay': scrollSection.scrollDelayDesc,
-      'scrollStep': scrollSection.scrollStepDesc,
-      'minScrollAmount': scrollSection.minScrollAmountDesc,
-      'maxScrollAttempts': scrollSection.maxScrollAttemptsDesc,
-      'noMaxNewMessagesCount': scrollSection.noMaxNewMessagesCountDesc
-    };
-
-    Object.keys(descriptions).forEach(id => {
-      const settingRow = document.querySelector(`#${id}`).closest('.setting-row');
-      const smallElement = settingRow?.querySelector('small');
-      if (smallElement && descriptions[id]) {
-        smallElement.textContent = descriptions[id];
-      }
-    });
-
     // 更新按鈕
     const saveScrollBtn = document.getElementById('saveScrollSettings');
     const resetScrollBtn = document.getElementById('resetScrollSettings');
@@ -343,37 +291,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const syncHint = document.querySelector('#sync-tab .settings-hint');
     if (syncHint) syncHint.textContent = syncSection.hint;
 
-    // 更新設定組標題
-    const settingsGroups = document.querySelectorAll('#sync-tab .settings-group h4');
-    if (settingsGroups[0]) settingsGroups[0].textContent = syncSection.syncStatus;
-    if (settingsGroups[1]) settingsGroups[1].textContent = syncSection.availableModels;
-    if (settingsGroups[2]) settingsGroups[2].textContent = syncSection.syncExplanation;
-
     // 更新按鈕
     if (manualSyncPopupBtn) manualSyncPopupBtn.textContent = syncSection.manualSync;
     if (checkSyncStatusBtn) checkSyncStatusBtn.textContent = syncSection.checkStatus;
     if (refreshModelsBtn) refreshModelsBtn.textContent = syncSection.refreshModels;
-
-    // 更新同步說明區域的文字
-    const syncIntervalInfos = document.querySelectorAll('#sync-tab .sync-interval-info');
-    if (syncIntervalInfos[0]) {
-      const span = syncIntervalInfos[0].querySelector('span');
-      const small = syncIntervalInfos[0].querySelector('small');
-      if (span) span.textContent = syncSection.manualSyncMode;
-      if (small) small.textContent = syncSection.manualSyncModeDesc;
-    }
-    if (syncIntervalInfos[1]) {
-      const span = syncIntervalInfos[1].querySelector('span');
-      const small = syncIntervalInfos[1].querySelector('small');
-      if (span) span.textContent = syncSection.syncProcess;
-      if (small) small.textContent = syncSection.syncProcessDesc;
-    }
-
-    // 更新模型列表區域的預設文字
-    const modelsPlaceholder = document.querySelector('.models-placeholder');
-    if (modelsPlaceholder && modelsPlaceholder.textContent.includes('載入')) {
-      modelsPlaceholder.textContent = syncSection.loadingModels;
-    }
   }
 
   // 更新使用說明文字
@@ -419,7 +340,9 @@ document.addEventListener('DOMContentLoaded', function() {
       });
     } catch (error) {
       console.error('載入 prompt 時發生錯誤:', error);
-      showPromptActionStatus('❌ 載入失敗', 'error');
+      const translations = currentTranslations?.prompt || {};
+      const errorText = translations.loadError || '❌ 載入失敗';
+      showPromptActionStatus(errorText, 'error');
     }
   }
 
@@ -582,23 +505,24 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   function checkSlackPage() {
-    const translations = currentTranslations?.status || {};
-    
     chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
       const currentTab = tabs[0];
       console.log('Current tab:', currentTab);
       
+      // 獲取當前翻譯
+      const translations = currentTranslations?.status || {};
+      
       if (!currentTab) {
-        const errorText = translations.cannotDetectPage || '無法檢測當前頁面';
-        updateStatus('❌', errorText, 'error');
+        const cannotDetectText = translations.cannotDetectPage || '無法檢測當前頁面';
+        updateStatus('❌', cannotDetectText, 'error');
         return;
       }
       
       console.log('Current URL:', currentTab.url);
       
       if (currentTab.url && currentTab.url.includes('slack.com')) {
-        const checkingText = translations.onSlackCheckingThread || '在 Slack 頁面中 - 檢查討論串...';
-        updateStatus('✅', checkingText, 'success');
+        const onSlackCheckingText = translations.onSlackCheckingThread || '在 Slack 頁面中 - 檢查討論串...';
+        updateStatus('✅', onSlackCheckingText, 'success');
         
         // 等待一下再檢查討論串，給content script時間載入
         setTimeout(() => {
@@ -613,14 +537,15 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   function checkThreadAvailability(tabId) {
-    const translations = currentTranslations?.status || {};
-    
     console.log('Checking thread availability for tab:', tabId);
     
     // 檢查是否有討論串可用
     chrome.tabs.sendMessage(tabId, { action: 'checkThreadAvailable' }, function(response) {
       console.log('Response from content script:', response);
       console.log('Runtime error:', chrome.runtime.lastError);
+      
+      // 獲取當前翻譯
+      const translations = currentTranslations?.status || {};
       
       if (chrome.runtime.lastError) {
         console.error('Content script communication error:', chrome.runtime.lastError.message);
@@ -635,8 +560,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }, function(_results) {
           if (chrome.runtime.lastError) {
             console.error('Backup script injection failed:', chrome.runtime.lastError.message);
-            const refreshText = translations.pleaseRefreshSlack || '請重新整理 Slack 頁面以載入完整功能';
-            updateStatus('❌', refreshText, 'error');
+            const pleaseRefreshText = translations.pleaseRefreshSlack || '請重新整理 Slack 頁面以載入完整功能';
+            updateStatus('❌', pleaseRefreshText, 'error');
           } else {
             console.log('Backup script injected successfully, retrying check...');
             const backupLoadedText = translations.backupScriptLoaded || '備用腳本已載入，正在檢查...';
@@ -850,7 +775,6 @@ document.addEventListener('DOMContentLoaded', function() {
   function loadSyncStatus() {
     // 獲取當前翻譯
     const translations = currentTranslations?.sync || {};
-    
     const checkingText = translations.checking || '檢查同步狀態中...';
     updateSyncStatus('⏳', checkingText);
     
@@ -868,7 +792,7 @@ document.addEventListener('DOMContentLoaded', function() {
         };
         
         const icon = statusIcons[response.status] || '❓';
-        const message = response.message || translations.statusUnknown || '狀態未知';
+        const message = response.message || (translations.statusUnknown || '狀態未知');
         
         updateSyncStatus(icon, message);
         console.log('Sync status updated:', response);
@@ -917,6 +841,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 同時獲取最後更新時間
     chrome.storage.local.get(['modelsLastUpdated'], (result) => {
+      const translations = currentTranslations?.sync || {};
       const lastUpdated = result.modelsLastUpdated;
       if (lastUpdated) {
         const updateTime = new Date(lastUpdated);
@@ -928,13 +853,13 @@ document.addEventListener('DOMContentLoaded', function() {
           modelsLastUpdate.textContent = `${translations.lastUpdate || '最後更新：'}${lessThanHourText}`;
         } else if (diffHours < 24) {
           const hoursText = translations.lastUpdateHours ? 
-            translations.lastUpdateHours.replace('{{hours}}', diffHours) :
+            translations.lastUpdateHours.replace('{{hours}}', diffHours) : 
             `${diffHours}小時前`;
           modelsLastUpdate.textContent = `${translations.lastUpdate || '最後更新：'}${hoursText}`;
         } else {
           const diffDays = Math.floor(diffHours / 24);
           const daysText = translations.lastUpdateDays ? 
-            translations.lastUpdateDays.replace('{{days}}', diffDays) :
+            translations.lastUpdateDays.replace('{{days}}', diffDays) : 
             `${diffDays}天前`;
           modelsLastUpdate.textContent = `${translations.lastUpdate || '最後更新：'}${daysText}`;
         }
@@ -1250,4 +1175,4 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // 減少檢查頻率，避免過度請求
   setInterval(checkSlackPage, 10000);
-});
+}); 

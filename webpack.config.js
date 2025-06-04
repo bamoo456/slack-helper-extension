@@ -33,7 +33,8 @@ export default {
         { from: 'manifest.json', to: 'manifest.json' },
         { from: 'popup.html', to: 'popup.html' },
         { from: 'styles.css', to: 'styles.css' },
-        { from: 'images', to: 'images' }
+        { from: 'images', to: 'images' },
+        { from: 'src/locales', to: 'locales' }
       ]
     })
   ],

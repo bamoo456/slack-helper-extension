@@ -19,13 +19,79 @@ import {
   switchModelAndPasteMessages,
   getAvailableModels,
   getDefaultModels,
-  isAutoModel
+  isAutoModel,
+  extractGeminiModels,
+  openGeminiInBackground
 } from './gemini-utils.js';
+
+// 全局變量存儲當前翻譯
+let currentTranslations = null;
+
+// 載入翻譯文件
+async function loadTranslations() {
+  try {
+    // 獲取用戶選擇的語言
+    const result = await chrome.storage.local.get(['selectedLanguage']);
+    const language = result.selectedLanguage || 'zh-TW';
+    
+    // 載入對應的翻譯文件
+    const response = await fetch(chrome.runtime.getURL(`locales/${language}/translation.json`));
+    const translations = await response.json();
+    
+    currentTranslations = translations;
+    console.log(`Background script loaded translations for: ${language}`);
+    return translations;
+  } catch (error) {
+    console.error('Failed to load translations in background script:', error);
+    // 如果載入失敗，返回空對象，使用硬編碼的中文作為備用
+    return {};
+  }
+}
+
+// 獲取翻譯文字的輔助函數
+function getTranslation(key, fallback, params = {}) {
+  if (!currentTranslations) {
+    return fallback;
+  }
+  
+  const keys = key.split('.');
+  let value = currentTranslations;
+  
+  for (const k of keys) {
+    if (value && typeof value === 'object' && k in value) {
+      value = value[k];
+    } else {
+      return fallback;
+    }
+  }
+  
+  // 如果有參數需要替換
+  if (typeof value === 'string' && Object.keys(params).length > 0) {
+    Object.keys(params).forEach(param => {
+      value = value.replace(new RegExp(`{{${param}}}`, 'g'), params[param]);
+    });
+  }
+  
+  return value || fallback;
+}
+
+// 初始化翻譯
+loadTranslations();
+
+// 監聽語言變更
+chrome.storage.onChanged.addListener((changes, namespace) => {
+  if (namespace === 'local' && changes.selectedLanguage) {
+    console.log('Language changed, reloading translations...');
+    loadTranslations();
+  }
+});
 
 // 創建背景同步管理器實例
 const backgroundSyncManager = new BackgroundModelSyncManager();
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  console.log('Background received message:', request);
+  
   if (request.action === 'openGeminiWithMessages') {
     handleGeminiSummaryRequest(request.messages, sender.tab, request.selectedModel);
     sendResponse({ success: true });
@@ -53,21 +119,22 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true; // 保持異步響應開啟
   } else if (request.action === 'triggerBackgroundSync') {
     // 處理手動觸發背景同步請求
-    console.log('收到手動同步請求');
+    console.log(getTranslation('background.syncRequestReceived', '收到手動同步請求'));
+    
     backgroundSyncManager.manualSync()
       .then(() => {
-        console.log('手動同步成功完成');
+        console.log(getTranslation('background.syncCompleted', '手動同步成功完成'));
         sendResponse({ 
           success: true, 
-          message: '手動同步成功完成',
+          message: getTranslation('background.syncCompletedMessage', '手動同步成功完成'),
           timestamp: Date.now()
         });
       })
       .catch(error => {
-        console.error('手動同步失敗:', error);
+        console.error(getTranslation('background.syncFailed', '手動同步失敗') + ':', error);
         sendResponse({ 
           success: false, 
-          error: error.message || '手動同步失敗',
+          error: error.message || getTranslation('background.syncFailed', '手動同步失敗'),
           timestamp: Date.now()
         });
       });
@@ -79,7 +146,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     
     if (backgroundSyncManager.isSyncing) {
       status = 'syncing';
-      message = '背景同步進行中...';
+      message = getTranslation('background.syncInProgress', '背景同步進行中...');
     } else if (backgroundSyncManager.lastSyncTime > 0) {
       const timeDiff = now - backgroundSyncManager.lastSyncTime;
       const minutes = Math.floor(timeDiff / (1000 * 60));
@@ -87,16 +154,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       
       if (minutes < 5) {
         status = 'synced';
-        message = '剛完成同步';
+        message = getTranslation('background.syncJustCompleted', '剛完成同步');
       } else if (minutes < 60) {
         status = 'synced';
-        message = `${minutes} 分鐘前同步完成`;
+        message = getTranslation('background.syncMinutesAgo', '{{minutes}} 分鐘前同步完成', { minutes });
       } else if (hours < 24) {
         status = 'synced';
-        message = `${hours} 小時前同步完成`;
+        message = getTranslation('background.syncHoursAgo', '{{hours}} 小時前同步完成', { hours });
       } else {
         status = 'unknown';
-        message = '需要重新同步';
+        message = getTranslation('background.syncNeedsUpdate', '需要重新同步');
       }
     } else {
       // 檢查 storage 中的最後更新時間
@@ -109,23 +176,23 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           if (hours < 1) {
             sendResponse({
               status: 'synced',
-              message: '模型已同步 (< 1小時前)'
+              message: getTranslation('background.syncedRecently', '模型已同步 (< 1小時前)')
             });
           } else if (hours < 24) {
             sendResponse({
               status: 'synced',
-              message: `模型已同步 (${hours}小時前)`
+              message: getTranslation('background.syncedHoursAgo', '模型已同步 ({{hours}}小時前)', { hours })
             });
           } else {
             sendResponse({
               status: 'unknown',
-              message: '模型需要更新'
+              message: getTranslation('background.syncNeedsRefresh', '模型需要更新')
             });
           }
         } else {
           sendResponse({
             status: 'error',
-            message: '尚未同步'
+            message: getTranslation('background.neverSynced', '尚未同步')
           });
         }
       });
@@ -161,7 +228,7 @@ async function extractSlackThreadMessages(tabId) {
     if (results && results[0] && results[0].result) {
       return results[0].result;
     } else {
-      throw new Error('無法提取Slack訊息');
+      throw new Error(getTranslation('background.extractSlackError', '無法提取Slack訊息'));
     }
   } catch (error) {
     console.error('Error extracting messages:', error);
@@ -248,14 +315,14 @@ chrome.runtime.onInstalled.addListener((details) => {
   backgroundSyncManager.initialize();
   
   if (details.reason === 'install') {
-    console.log('首次安裝完成');
+    console.log(getTranslation('background.firstInstall', '首次安裝完成'));
   } else if (details.reason === 'update') {
-    console.log('擴充功能更新完成');
+    console.log(getTranslation('background.extensionUpdate', '擴充功能更新完成'));
   }
 });
 
 // 監聽擴充功能啟動事件
 chrome.runtime.onStartup.addListener(() => {
-  console.log('Chrome 啟動，初始化背景模型同步');
+  console.log(getTranslation('background.chromeStartup', 'Chrome 啟動，初始化背景模型同步'));
   backgroundSyncManager.initialize();
 }); 

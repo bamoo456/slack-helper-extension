@@ -36,5 +36,16 @@
       "js": ["content-script.js"],
       "run_at": "document_end"
     }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "src/locales/zh-TW/translation.json",
+        "src/locales/en/translation.json",
+        "src/locales/*/*.json",
+        "locales/*/*.json"
+      ],
+      "matches": ["<all_urls>"]
+    }
   ]
 }

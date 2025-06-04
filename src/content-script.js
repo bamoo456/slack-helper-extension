@@ -30,7 +30,12 @@ class SlackThreadExtractor {
     this.buttonManager = new SummaryButtonManager();
     this.threadAnalyzer = new ThreadAnalyzer();
     this.previewModal = new PreviewModalManager();
-    this.pageObserver = new PageObserver(() => this.addSummaryButton());
+    this.pageObserver = new PageObserver(() => {
+      // 使用 Promise 來處理異步調用，但不等待結果
+      this.addSummaryButton().catch(error => {
+        console.error('Error in PageObserver callback:', error);
+      });
+    });
     this.initialized = false;
     
     this.init();
@@ -55,9 +60,15 @@ class SlackThreadExtractor {
 
   startObserving() {
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => this.addSummaryButton());
+      document.addEventListener('DOMContentLoaded', () => {
+        this.addSummaryButton().catch(error => {
+          console.error('Error in DOMContentLoaded callback:', error);
+        });
+      });
     } else {
-      this.addSummaryButton();
+      this.addSummaryButton().catch(error => {
+        console.error('Error in immediate addSummaryButton call:', error);
+      });
     }
 
     if (this.pageObserver) {
@@ -65,7 +76,7 @@ class SlackThreadExtractor {
     }
   }
 
-  addSummaryButton() {
+  async addSummaryButton() {
     if (!this.initialized) {
       console.log('Extension not yet initialized, skipping button addition');
       return;
@@ -134,7 +145,7 @@ class SlackThreadExtractor {
 
       console.log(`✅ Found ${messageElements.length} message elements, proceeding with button addition`);
 
-      const summaryButton = this.buttonManager.createSummaryButton(() => this.handleSummaryClick());
+      const summaryButton = await this.buttonManager.createSummaryButton(() => this.handleSummaryClick());
       const threadHeader = this.domDetector.findThreadHeader(threadContainer);
       
       if (threadHeader) {
@@ -172,7 +183,7 @@ class SlackThreadExtractor {
     
     console.log('Summary button clicked');
     
-    this.buttonManager.updateButtonState(button, 'loading', '🔍 正在檢查討論串...');
+    await this.buttonManager.updateButtonState(button, 'loading');
 
     try {
       // Debug: Log current page state
@@ -180,29 +191,37 @@ class SlackThreadExtractor {
       
       // 使用自動滾動收集完整的討論串訊息
       console.log('開始自動滾動收集完整討論串訊息...');
-      this.buttonManager.updateButtonState(button, 'loading', '📜 正在收集所有訊息...');
+      
+      // 獲取翻譯文字
+      const translations = await this.getTranslations();
+      const collectingText = translations?.ui?.collectingMessages || '📜 正在收集所有訊息...';
+      
+      await this.buttonManager.updateButtonState(button, 'loading', collectingText);
       
       console.log('ThreadScrollCollector available, using it');
       const messages = await this.scrollCollector.collectCompleteThreadMessages();
       
       if (messages.length === 0) {
-        throw new Error('未找到討論串訊息');
+        const errorText = translations?.errors?.noThreadMessages || '未找到討論串訊息';
+        throw new Error(errorText);
       }
 
       console.log(`成功收集到 ${messages.length} 條完整訊息`);
-      this.buttonManager.updateButtonState(button, 'loading', '✅ 訊息收集完成');
+      const collectedText = translations?.ui?.messagesCollected || '✅ 訊息收集完成';
+      await this.buttonManager.updateButtonState(button, 'loading', collectedText);
       
       // 短暫延遲讓用戶看到收集完成的狀態
       await new Promise(resolve => setTimeout(resolve, 500));
 
       // Show preview modal
-      this.buttonManager.updateButtonState(button, 'loading', '📋 顯示預覽...');
+      const showingPreviewText = translations?.ui?.showingPreview || '📋 顯示預覽...';
+      await this.buttonManager.updateButtonState(button, 'loading', showingPreviewText);
       
       const result = await this.previewModal.showThreadPreview(messages);
       
       if (!result || !result.confirmed) {
         console.log('User cancelled the operation');
-        this.buttonManager.updateButtonState(button, 'default');
+        await this.buttonManager.updateButtonState(button, 'default');
         return;
       }
 
@@ -210,7 +229,8 @@ class SlackThreadExtractor {
       const selectedModel = result.selectedModel || 'auto';
 
       // Format messages for Gemini
-      this.buttonManager.updateButtonState(button, 'opening', '🚀 正在開啟 Gemini...');
+      const openingGeminiText = translations?.ui?.openingGemini || '🚀 正在開啟 Gemini...';
+      await this.buttonManager.updateButtonState(button, 'opening', openingGeminiText);
 
       const formattedMessages = await this.threadAnalyzer.formatMessagesForGemini(result.messages);
       
@@ -219,12 +239,12 @@ class SlackThreadExtractor {
       // Send to background script to open Gemini
       this.sendMessageToBackground(formattedMessages, selectedModel);
 
-      this.buttonManager.updateButtonState(button, 'success');
+      await this.buttonManager.updateButtonState(button, 'success');
       this.buttonManager.resetButtonAfterDelay(button);
 
     } catch (error) {
       console.error('Error:', error);
-      this.buttonManager.updateButtonState(button, 'error');
+      await this.buttonManager.updateButtonState(button, 'error');
       this.buttonManager.resetButtonAfterDelay(button);
     }
   }
@@ -324,6 +344,81 @@ class SlackThreadExtractor {
     console.log('Thread container:', this.findThreadContainer());
     console.log('Message elements:', this.domDetector.findMessageElements(true));
     console.log('=====================================');
+  }
+
+  /**
+   * 獲取當前語言的翻譯
+   * @returns {Promise<Object>} 翻譯對象
+   */
+  async getTranslations() {
+    try {
+      const isChromeExtensionContext = this.isValidChromeExtensionContext();
+      
+      if (isChromeExtensionContext) {
+        // 獲取當前選擇的語言
+        const selectedLanguage = await this.getCurrentLanguage();
+        
+        // 載入對應語言的翻譯文件
+        const response = await fetch(chrome.runtime.getURL(`locales/${selectedLanguage}/translation.json`));
+        return await response.json();
+      }
+      
+      return this.getFallbackTranslations();
+    } catch (error) {
+      console.warn('Failed to load translations:', error);
+      return this.getFallbackTranslations();
+    }
+  }
+
+  /**
+   * 獲取當前選擇的語言
+   * @returns {Promise<string>} 語言代碼
+   */
+  async getCurrentLanguage() {
+    return new Promise((resolve) => {
+      chrome.storage.local.get(['selectedLanguage'], (result) => {
+        if (chrome.runtime.lastError) {
+          console.warn('Error getting current language:', chrome.runtime.lastError);
+          resolve('zh-TW'); // 預設語言
+        } else {
+          resolve(result.selectedLanguage || 'zh-TW');
+        }
+      });
+    });
+  }
+
+  /**
+   * 獲取備用翻譯（中文版本）
+   * @returns {Object} 備用翻譯對象
+   */
+  getFallbackTranslations() {
+    return {
+      ui: {
+        collectingMessages: '📜 正在收集所有訊息...',
+        messagesCollected: '✅ 訊息收集完成',
+        showingPreview: '📋 顯示預覽...',
+        openingGemini: '🚀 正在開啟 Gemini...'
+      },
+      errors: {
+        noThreadMessages: '未找到討論串訊息'
+      }
+    };
+  }
+
+  /**
+   * 檢查 Chrome 擴展環境是否有效
+   * @returns {boolean} 是否為有效的 Chrome 擴展環境
+   */
+  isValidChromeExtensionContext() {
+    try {
+      return typeof chrome !== 'undefined' && 
+             chrome.storage && 
+             chrome.storage.local && 
+             chrome.runtime && 
+             chrome.runtime.id;
+    } catch (error) {
+      return false;
+    }
   }
 }
 
@@ -448,7 +543,9 @@ window.debugSlackExtension = function() {
     
     // Try to manually add button
     console.log('=== Manual Button Addition Test ===');
-    slackThreadExtractor.addSummaryButton();
+    slackThreadExtractor.addSummaryButton().catch(error => {
+      console.error('Error in manual button addition:', error);
+    });
     
     const messages = slackThreadExtractor.extractThreadMessages();
     console.log('Extracted messages:', messages);
@@ -464,7 +561,9 @@ window.forceAddButton = function() {
   if (slackThreadExtractor) {
     console.log('🔧 Force adding summary button...');
     slackThreadExtractor.buttonManager.removeExistingButtons();
-    slackThreadExtractor.addSummaryButton();
+    slackThreadExtractor.addSummaryButton().catch(error => {
+      console.error('Error in force add button:', error);
+    });
   } else {
     console.log('Extension not initialized yet');
   }
