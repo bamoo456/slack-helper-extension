@@ -89,7 +89,7 @@ body {
 }
 
 .container {
-  width: 350px;
+  width: 450px;
   padding: 20px;
   background: white;
   border-radius: 12px;
@@ -1011,6 +1011,16 @@ h4 {
   content: '❌';
 }
 
+.step.completed .step-icon,
+.step.error .step-icon {
+  font-size: 0;
+}
+
+.step.completed .step-icon::before,
+.step.error .step-icon::before {
+  font-size: 16px;
+}
+
 .step-text {
   font-size: 14px;
   color: #495057;
@@ -1088,10 +1098,12 @@ h4 {
 
 .modal-container.success .sync-spinner {
   animation: none;
+  font-size: 0;
 }
 
 .modal-container.success .sync-spinner::before {
   content: '✅';
+  font-size: 32px;
 }
 
 /* Error State */
@@ -1101,8 +1113,10 @@ h4 {
 
 .modal-container.error .sync-spinner {
   animation: none;
+  font-size: 0;
 }
 
 .modal-container.error .sync-spinner::before {
   content: '❌';
+  font-size: 32px;
 } 
