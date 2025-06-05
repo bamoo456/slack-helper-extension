@@ -1,5 +1,5 @@
 {
-  "title": "📝 Slack Thread Summary Tool",
+  "title": "📝 Slack Helper",
   "description": "Use the '📝 Summarize this thread' button in Slack threads to automatically extract messages and generate summaries in Gemini.",
   "tabs": {
     "prompt": "📝 AI Prompt",
@@ -162,7 +162,7 @@
     "cancelSync": "❌ Cancel Sync"
   },
   "ui": {
-    "summaryButton": "📝 Summarize this thread",
+    "summaryButton": "📝 AI Summary",
     "loading": "⏳ Analyzing thread...",
     "opening": "🚀 Opening Gemini...",
     "success": "✅ Gemini opened",
@@ -181,7 +181,7 @@
     "copyToClipboard": "📋 Copy to Clipboard",
     "copied": "✅ Copied",
     "cancel": "❌ Cancel",
-    "confirm": "✅ Confirm Summary",
+    "confirm": "✅ Confirm",
     "autoModel": "🔄 Auto (Use Gemini page default model)",
     "autoModelDesc": "🔄 Don't switch model, use current default model on Gemini page",
     "lengthShort": "Short discussion",

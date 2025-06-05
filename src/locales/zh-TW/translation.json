@@ -1,5 +1,5 @@
 {
-  "title": "📝 Slack 討論串摘要工具",
+  "title": "📝 Slack 小幫手",
   "description": "在 Slack 討論串中使用「📝 摘要此討論串」按鈕來自動提取訊息並在 Gemini 中生成摘要。",
   "tabs": {
     "prompt": "📝 AI 提示詞",
@@ -9,7 +9,7 @@
   "prompt": {
     "title": "📝 自定義 AI提示詞",
     "hint": "※ 在您的 AI提示詞 中加入 {MESSAGES}，系統會自動將其替換為需要摘要的 Slack 訊息內容。",
-    "currentPrompt": "📋 當前已保存的 Prompt：",
+    "currentPrompt": "📋 當前已保存的提示詞：",
     "loading": "載入中...",
     "wordCount": "字數：",
     "status": "狀態：",
@@ -162,7 +162,7 @@
     "cancelSync": "❌ 取消同步"
   },
   "ui": {
-    "summaryButton": "📝 摘要此討論串",
+    "summaryButton": "📝 AI 摘要",
     "loading": "⏳ 正在分析討論串...",
     "opening": "🚀 正在開啟 Gemini...",
     "success": "✅ 已開啟 Gemini",
