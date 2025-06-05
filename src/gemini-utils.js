@@ -7,9 +7,6 @@
  * 中央模型配置 - 所有模型相關的配置都在這裡定義
  */
 export const GEMINI_MODELS_CONFIG = {
-  // 基礎模型（總是可用的）
-  BASE_MODELS: [],
-  
   // 模型顯示名稱映射（用於 Gemini UI 中的識別）
   MODEL_DISPLAY_MAP: {
     'gemini-2.5-flash': '2.5 Flash',
@@ -318,25 +315,8 @@ export async function syncAvailableModels(tabId) {
       
       // 使用提取到的模型
       completeModelsList = [...extractedModels];
-      
-      // 智能合併：只添加不存在的基礎模型
-      const existingModelValues = new Set(extractedModels.map(model => model.value));
-      const uniqueBaseModels = GEMINI_MODELS_CONFIG.BASE_MODELS.filter(baseModel => {
-        const exists = existingModelValues.has(baseModel.value);
-        if (exists) {
-          console.log(`🔄 跳過重複的基礎模型: ${baseModel.value}`);
-        }
-        return !exists;
-      });
-      
-      if (uniqueBaseModels.length > 0) {
-        console.log('添加不重複的基礎模型:', uniqueBaseModels);
-        completeModelsList.unshift(...uniqueBaseModels); // 基礎模型放在前面
-      }
     } else {
-      console.log('未提取到模型，僅使用基礎模型（auto）');
-      // 只有在沒有提取到模型時才使用基礎模型
-      completeModelsList = [...GEMINI_MODELS_CONFIG.BASE_MODELS];
+      completeModelsList = [];
     }
     
     // 儲存到 chrome storage
@@ -349,23 +329,6 @@ export async function syncAvailableModels(tabId) {
   } catch (error) {
     console.error('Error syncing available models:', error);
   }
-}
-
-/**
- * 檢查是否需要同步模型列表
- * @returns {Promise<boolean>} - 是否需要同步
- */
-export async function shouldSyncModels() {
-  return new Promise((resolve) => {
-    chrome.storage.local.get(['modelsLastUpdated'], (result) => {
-      const lastUpdated = result.modelsLastUpdated || 0;
-      const now = Date.now();
-      const maxAge = 6 * 60 * 60 * 1000; // 6 小時，比背景同步更頻繁一些
-      
-      // 如果超過 6 小時沒有更新，則需要同步
-      resolve(now - lastUpdated > maxAge);
-    });
-  });
 }
 
 /**
@@ -514,23 +477,9 @@ export async function handleGeminiSummaryRequest(messages, sourceTab, selectedMo
               return;
             }
             
-            // 非自動模式，檢查是否需要同步模型列表
-            const shouldSync = await shouldSyncModels();
-            
-            if (shouldSync) {
-              console.log('需要同步模型列表...');
-              try {
-                // await syncAvailableModels(geminiTab.id);
-                console.log('模型同步完成，切換模型並貼上訊息...');
-                await switchGeminiModelAndPasteMessages(geminiTab.id, selectedModel, messages);
-              } catch (error) {
-                console.error('模型同步失敗，直接切換模型:', error);
-                await switchGeminiModelAndPasteMessages(geminiTab.id, selectedModel, messages);
-              }
-            } else {
-              console.log('模型列表仍然有效，直接切換模型...');
-              await switchGeminiModelAndPasteMessages(geminiTab.id, selectedModel, messages);
-            }
+            // 非自動模式，直接切換模型並貼上訊息
+            console.log('非自動模式，直接切換模型並貼上訊息...');
+            await switchGeminiModelAndPasteMessages(geminiTab.id, selectedModel, messages);
           })
           .catch((error) => {
             console.error('❌ 等待 Gemini 頁面準備就緒失敗:', error);
@@ -703,8 +652,7 @@ export function extractAvailableModels() {
   }
   
   if (!modeSwitcherButton) {
-    console.log('未找到模型切換按鈕，返回預設模型列表...');    
-    return []; // Return empty array as BASE_MODELS is empty
+    return []; // Return empty array if no models detected
   }
   
   // 點擊按鈕打開選單
@@ -730,9 +678,7 @@ export function extractAvailableModels() {
       }
       
       if (!menu) {
-        console.log('未找到模型選單，返回預設模型列表');
-        resolve(getDefaultModels());
-        return;
+        return resolve([]);
       }
       
       // 提取所有模型選項
@@ -786,7 +732,7 @@ export function extractAvailableModels() {
         }
       }, 500);
       
-      resolve(models.length > 0 ? models : []); // Return empty array as BASE_MODELS is empty
+      resolve(models.length > 0 ? models : []); // Return empty array if no models detected
     }, 1500); // 等待選單完全載入
   });
 }
@@ -998,26 +944,11 @@ export async function getAvailableModels() {
         console.log('📋 Gemini Utils: Synced models:', syncedModels);
         resolve(syncedModels);
       } else {
-        console.log('🔄 Gemini Utils: Using default models (base)');
-        
-        const defaultModels = [
-          ...GEMINI_MODELS_CONFIG.BASE_MODELS
-        ];
-        
-        console.log('📋 Gemini Utils: Default models:', defaultModels);
-        resolve(defaultModels);
+        console.log('🔄 Gemini Utils: No synced models available, returning empty array');
+        resolve([]);
       }
     });
   });
-}
-
-/**
- * 獲取預設模型列表（同步版本，用於不支援 async 的地方）
- * @returns {Array} - 預設模型列表
- */
-export function getDefaultModels() {
-  // 返回基礎模型
-  return [...GEMINI_MODELS_CONFIG.BASE_MODELS];
 }
 
 /**

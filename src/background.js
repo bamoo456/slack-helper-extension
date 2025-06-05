@@ -2,26 +2,10 @@
 
 // Import all Gemini-related utilities from gemini-utils.js
 import {
-  GEMINI_MODELS_CONFIG,
   BackgroundModelSyncManager,
-  getGeminiModelDisplayName,
-  generateGeminiUrl,
-  getAvailableGeminiModels,
   syncAvailableModels,
-  shouldSyncModels,
-  waitForGeminiPageReady,
-  checkGeminiPageReadiness,
   handleGeminiSummaryRequest,
-  pasteMessagesDirectly,
-  pasteMessagesIntoGemini,
-  switchGeminiModelAndPasteMessages,
-  extractAvailableModels,
-  switchModelAndPasteMessages,
   getAvailableModels,
-  getDefaultModels,
-  isAutoModel,
-  extractGeminiModels,
-  openGeminiInBackground
 } from './gemini-utils.js';
 
 // 全局變量存儲當前翻譯
