@@ -34,7 +34,8 @@ export default {
         { from: 'popup.html', to: 'popup.html' },
         { from: 'styles.css', to: 'styles.css' },
         { from: 'images', to: 'images' },
-        { from: 'src/locales', to: 'locales' }
+        { from: 'src/locales', to: 'locales' },
+        { from: 'src/injected-utils.js', to: 'src/injected-utils.js' }
       ]
     })
   ],

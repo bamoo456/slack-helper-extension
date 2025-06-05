@@ -1,3 +1,9 @@
+/**
+ * Popup Script for Slack Helper Extension
+ */
+
+import { sleep, debounce } from './time-utils.js';
+
 // 全局變量存儲當前翻譯
 let currentTranslations = null;
 

@@ -3,6 +3,12 @@
  * Handles automatic scrolling and message collection for complete thread extraction
  */
 
+import { 
+  sleep, 
+  withTimeout, 
+  TIME_CONSTANTS 
+} from './time-utils.js';
+
 export class ThreadScrollCollector {
   constructor(domDetector, textExtractor, progressCallback = null, messageProcessor = null, configManager = null) {
     this.domDetector = domDetector;
@@ -111,10 +117,11 @@ export class ThreadScrollCollector {
       });
       
       // 逐步滾動並收集訊息
-      const allMessages = await Promise.race([
+      const allMessages = await withTimeout(
         this.scrollAndCollectMessages(scrollContainer),
-        timeoutPromise
-      ]);
+        5 * TIME_CONSTANTS.MINUTE,
+        '滾動收集超時'
+      );
       
       // 如果自動滾動收集的訊息太少，回退到原方法
       if (allMessages.length === 0) {
@@ -427,15 +434,14 @@ export class ThreadScrollCollector {
    * 等待滾動完成
    */
   async waitForScrollComplete() {
-    await new Promise(resolve => setTimeout(resolve, this.scrollSettings.scrollDelay));
+    await sleep(this.scrollSettings.scrollDelay);
   }
 
   /**
    * 等待虛擬列表更新
    */
   async waitForVirtualListUpdate() {
-    // 虛擬列表可能需要額外時間來渲染新內容
-    await new Promise(resolve => setTimeout(resolve, 200));
+    await sleep(200);
   }
 
   /**

@@ -2,6 +2,11 @@
  * Gemini Utilities - All Gemini-related configurations and functions
  */
 
+import { 
+  sleep, 
+  withTimeout, 
+  waitForCondition
+} from './time-utils.js';
 
 /**
  * 中央模型配置 - 所有模型相關的配置都在這裡定義
@@ -23,7 +28,7 @@ export const GEMINI_MODELS_CONFIG = {
 let backgroundSyncState = {
   isSyncing: false,
   lastSyncTime: 0,
-  minSyncInterval: 10 * 60 * 1000 // 最小同步間隔 10 分鐘
+  minSyncInterval: 10 * 1000 // 最小同步間隔 10 秒
 };
 
 /**
@@ -87,13 +92,12 @@ export async function performBackgroundModelSync(forceSync = false) {
 
     console.log(`背景開啟 Gemini 頁面進行同步，Tab ID: ${geminiTab.id}`);
 
-    // 使用 Promise.race 來添加總體超時控制
-    await Promise.race([
+    // 使用 withTimeout 來添加總體超時控制
+    await withTimeout(
       performSyncWithTab(geminiTab.id),
-      new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('同步操作超時')), syncTimeout)
-      )
-    ]);
+      syncTimeout,
+      '同步操作超時'
+    );
 
     console.log('✅ 背景同步流程成功完成');
 
@@ -160,37 +164,36 @@ async function performSyncWithTab(tabId) {
 async function waitForTabLoad(tabId) {
   const loadTimeout = 30000; // 30 seconds timeout
   
-  return Promise.race([
-    new Promise((resolve) => {
-      const listener = (updatedTabId, changeInfo, _tab) => {
-        if (updatedTabId === tabId && changeInfo.status === 'complete') {
-          chrome.tabs.onUpdated.removeListener(listener);
-          console.log(`📄 Tab ${tabId} 載入完成，等待 3 秒確保穩定性...`);
-          // 額外等待 3 秒確保頁面完全載入
-          setTimeout(resolve, 3000);
-        }
-      };
-      chrome.tabs.onUpdated.addListener(listener);
-      
-      // 檢查頁面是否已經載入完成
-      chrome.tabs.get(tabId, (tab) => {
-        if (chrome.runtime.lastError) {
-          console.warn('無法獲取 tab 資訊:', chrome.runtime.lastError);
-          return;
-        }
-        if (tab && tab.status === 'complete') {
-          chrome.tabs.onUpdated.removeListener(listener);
-          console.log(`📄 Tab ${tabId} 已經載入完成`);
-          setTimeout(resolve, 1000);
-        }
-      });
-    }),
-    new Promise((_, reject) => 
-      setTimeout(() => {
-        reject(new Error(`頁面載入超時 (${loadTimeout/1000} 秒)`));
-      }, loadTimeout)
-    )
-  ]);
+  const loadPromise = new Promise((resolve) => {
+    const listener = (updatedTabId, changeInfo, _tab) => {
+      if (updatedTabId === tabId && changeInfo.status === 'complete') {
+        chrome.tabs.onUpdated.removeListener(listener);
+        console.log(`📄 Tab ${tabId} 載入完成，等待 3 秒確保穩定性...`);
+        // 額外等待 3 秒確保頁面完全載入
+        sleep(3000).then(resolve);
+      }
+    };
+    chrome.tabs.onUpdated.addListener(listener);
+    
+    // 檢查頁面是否已經載入完成
+    chrome.tabs.get(tabId, (tab) => {
+      if (chrome.runtime.lastError) {
+        console.warn('無法獲取 tab 資訊:', chrome.runtime.lastError);
+        return;
+      }
+      if (tab && tab.status === 'complete') {
+        chrome.tabs.onUpdated.removeListener(listener);
+        console.log(`📄 Tab ${tabId} 已經載入完成`);
+        sleep(1000).then(resolve);
+      }
+    });
+  });
+  
+  return withTimeout(
+    loadPromise,
+    loadTimeout,
+    `頁面載入超時 (${loadTimeout/1000} 秒)`
+  );
 }
 
 /**
@@ -227,13 +230,12 @@ async function syncModelsInTab(tabId) {
       return;
     }
     
-    // 使用 Promise.race 來添加超時控制
-    await Promise.race([
+    // 使用 withTimeout 來添加超時控制
+    await withTimeout(
       syncAvailableModels(tabId),
-      new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('模型同步操作超時')), syncTimeout)
-      )
-    ]);
+      syncTimeout,
+      '模型同步操作超時'
+    );
     
     console.log('✅ 背景模型同步成功');
   } catch (error) {
@@ -277,6 +279,15 @@ export function generateGeminiUrl() {
  */
 export async function getAvailableGeminiModels(tabId) {
   try {
+    // 首先注入工具函數到頁面中
+    await chrome.scripting.executeScript({
+      target: { tabId: tabId },
+      files: ['src/injected-utils.js']
+    });
+    
+    console.log('✅ 工具函數已注入到頁面中');
+    
+    // 然後執行模型檢測函數
     const results = await chrome.scripting.executeScript({
       target: { tabId: tabId },
       function: extractAvailableModels
@@ -332,47 +343,34 @@ export async function syncAvailableModels(tabId) {
  * @returns {Promise<void>} - 當頁面準備就緒時解析
  */
 export async function waitForGeminiPageReady(tabId) {
-  const maxAttempts = 8; // 減少到 8 次嘗試 (約 4-8 秒)
-  const checkInterval = 500; // 減少到每 0.5 秒檢查一次
-  
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+  const checkPageReadiness = async () => {
     try {
-      console.log(`Checking Gemini page readiness... Attempt ${attempt}/${maxAttempts}`);
-      
       const result = await chrome.scripting.executeScript({
         target: { tabId: tabId },
         function: checkGeminiPageReadiness
       });
       
       if (result && result[0] && result[0].result && result[0].result.isReady) {
-        console.log(`✅ Gemini page ready after ${attempt} attempts`);
-        
-        // 短暫延遲確保穩定性
-        await new Promise(resolve => setTimeout(resolve, 200));
-        return;
+        console.log(`✅ Gemini page ready`);
+        return true;
       }
       
-      console.log(`❌ Gemini page not ready yet (attempt ${attempt}). Reason:`, result[0]?.result?.reason);
-      
-      // 等待下次檢查
-      if (attempt < maxAttempts) {
-        await new Promise(resolve => setTimeout(resolve, checkInterval));
-      }
-      
+      console.log(`❌ Gemini page not ready yet. Reason:`, result[0]?.result?.reason);
+      return false;
     } catch (error) {
-      console.warn(`Error checking page readiness (attempt ${attempt}):`, error);
-      
-      // 如果是最後一次嘗試，拋出錯誤
-      if (attempt === maxAttempts) {
-        throw new Error(`Failed to detect page readiness after ${maxAttempts} attempts`);
-      }
-      
-      // 等待下次檢查
-      await new Promise(resolve => setTimeout(resolve, checkInterval));
+      console.warn(`Error checking page readiness:`, error);
+      return false;
     }
-  }
+  };
+
+  await waitForCondition(checkPageReadiness, {
+    maxAttempts: 8,
+    intervalMs: 500,
+    operationName: 'Gemini 頁面準備檢查'
+  });
   
-  throw new Error(`Gemini page not ready after ${maxAttempts} attempts`);
+  // 短暫延遲確保穩定性
+  await sleep(200);
 }
 
 /**
@@ -480,13 +478,13 @@ export async function handleGeminiSummaryRequest(messages, sourceTab, selectedMo
             console.error('❌ 等待 Gemini 頁面準備就緒失敗:', error);
             // 如果等待失敗，仍然嘗試執行操作（作為備用方案）
             console.log('使用備用方案繼續執行...');
-            setTimeout(async () => {
+            sleep(2000).then(async () => {
               if (isAutoModel(selectedModel)) {
                 await pasteMessagesDirectly(geminiTab.id, messages);
               } else {
                 await switchGeminiModelAndPasteMessages(geminiTab.id, selectedModel, messages);
               }
-            }, 2000);
+            });
           });
       }
     });
@@ -624,9 +622,18 @@ export async function switchGeminiModelAndPasteMessages(tabId, selectedModel, me
 
 /**
  * 在Gemini頁面中執行的模型檢測函數
+ * 注意：這個函數會在頁面中執行，需要先注入 InjectedUtils
  */
 export function extractAvailableModels() {
   console.log('開始檢測 Gemini 可用模型...');
+  
+  // 檢查 InjectedUtils 是否可用
+  if (typeof window.InjectedUtils === 'undefined') {
+    console.error('InjectedUtils 未找到，無法執行模型檢測');
+    return Promise.resolve([]);
+  }
+  
+  const { sleep } = window.InjectedUtils;
   
   // 首先嘗試點擊模型切換按鈕來打開選單
   const modeSwitcherSelectors = [
@@ -647,88 +654,86 @@ export function extractAvailableModels() {
   }
   
   if (!modeSwitcherButton) {
-    return []; // Return empty array if no models detected
+    return Promise.resolve([]); // Return empty array if no models detected
   }
   
   // 點擊按鈕打開選單
   modeSwitcherButton.click();
   
   // 等待選單出現並檢測模型
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      const menuSelectors = [
-        'mat-menu',
-        '[role="menu"]',
-        '.mat-mdc-menu-panel',
-        '.mdc-menu-surface'
-      ];
-      
-      let menu = null;
-      for (const selector of menuSelectors) {
-        menu = document.querySelector(selector);
-        if (menu && menu.offsetParent !== null) {
-          console.log(`找到模型選單: ${selector}`);
-          break;
-        }
+  return sleep(1500).then(() => {
+    const menuSelectors = [
+      'mat-menu',
+      '[role="menu"]',
+      '.mat-mdc-menu-panel',
+      '.mdc-menu-surface'
+    ];
+    
+    let menu = null;
+    for (const selector of menuSelectors) {
+      menu = document.querySelector(selector);
+      if (menu && menu.offsetParent !== null) {
+        console.log(`找到模型選單: ${selector}`);
+        break;
       }
+    }
+    
+    if (!menu) {
+      return [];
+    }
+    
+    // 提取所有模型選項
+    const menuItems = menu.querySelectorAll('button, [role="menuitem"], mat-option, .mat-mdc-menu-item');
+    const models = [];
+    
+    menuItems.forEach((item, index) => {
+      const itemText = item.textContent.trim();
+      console.log(`檢測到模型選項 ${index + 1}: ${itemText}`);
       
-      if (!menu) {
-        return resolve([]);
-      }
-      
-      // 提取所有模型選項
-      const menuItems = menu.querySelectorAll('button, [role="menuitem"], mat-option, .mat-mdc-menu-item');
-      const models = [];
-      
-      menuItems.forEach((item, index) => {
-        const itemText = item.textContent.trim();
-        console.log(`檢測到模型選項 ${index + 1}: ${itemText}`);
+      if (itemText && itemText.length > 0) {
+        // 嘗試解析模型名稱
+        let value = '';
+        let displayName = itemText;
         
-        if (itemText && itemText.length > 0) {
-          // 嘗試解析模型名稱
-          let value = '';
-          let displayName = itemText;
-          
-          // 根據文字內容推斷模型類型
-          if (itemText.toLowerCase().includes('flash') || itemText.includes('2.5') && itemText.toLowerCase().includes('flash')) {
-            value = 'gemini-2.5-flash';
-            if (!displayName.includes('⚡')) {
-              displayName = `⚡ ${displayName}`;
-            }
-          } else if (itemText.toLowerCase().includes('pro') || itemText.includes('2.5') && itemText.toLowerCase().includes('pro')) {
-            value = 'gemini-2.5-pro';
-            if (!displayName.includes('🧠')) {
-              displayName = `🧠 ${displayName}`;
-            }
-          } else {
-            // 對於未知模型，使用文字內容作為 value
-            value = itemText.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-            displayName = itemText;
+        // 根據文字內容推斷模型類型
+        if (itemText.toLowerCase().includes('flash') || itemText.includes('2.5') && itemText.toLowerCase().includes('flash')) {
+          value = 'gemini-2.5-flash';
+          if (!displayName.includes('⚡')) {
+            displayName = `⚡ ${displayName}`;
           }
-          
-          models.push({
-            value: value,
-            displayName: displayName,
-            originalText: itemText
-          });
+        } else if (itemText.toLowerCase().includes('pro') || itemText.includes('2.5') && itemText.toLowerCase().includes('pro')) {
+          value = 'gemini-2.5-pro';
+          if (!displayName.includes('🧠')) {
+            displayName = `🧠 ${displayName}`;
+          }
+        } else {
+          // 對於未知模型，使用文字內容作為 value
+          value = itemText.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+          displayName = itemText;
         }
-      });
+        
+        models.push({
+          value: value,
+          displayName: displayName,
+          originalText: itemText
+        });
+      }
+    });
+    
+    console.log(`檢測到 ${models.length} 個模型:`, models);
+    
+    // 延遲關閉選單，確保有足夠時間讓後續操作使用
+    return sleep(500).then(() => {
+      try {
+        // 關閉選單（點擊其他地方）
+        document.body.click();
+        console.log('模型選單已關閉');
+      } catch (error) {
+        console.log('關閉選單時發生錯誤，但不影響功能:', error);
+      }
       
-      console.log(`檢測到 ${models.length} 個模型:`, models);
-      
-      // 延遲關閉選單，確保有足夠時間讓後續操作使用
-      setTimeout(() => {
-        try {
-          // 關閉選單（點擊其他地方）
-          document.body.click();
-          console.log('模型選單已關閉');
-        } catch (error) {
-          console.log('關閉選單時發生錯誤，但不影響功能:', error);
-        }
-      }, 500);
-      
-      resolve(models.length > 0 ? models : []); // Return empty array if no models detected
-    }, 1500); // 等待選單完全載入
+      return models.length > 0 ? models : []; // Return empty array if no models detected
+    });
   });
 }
 

@@ -9,6 +9,7 @@ import { MessageProcessor } from './message-processor.js';
 import { ThreadScrollCollector } from './scroll-collector.js';
 import { SummaryButtonManager, ThreadAnalyzer, PreviewModalManager, PageObserver } from './ui-components.js';
 import { isGeminiPage } from './model-sync.js';
+import { sleep } from './time-utils.js';
 
 
 console.log('Slack Helper content script loaded (webpack bundled)');
@@ -252,7 +253,7 @@ class SlackThreadExtractor {
       await this.buttonManager.updateButtonState(button, 'loading', collectedText);
       
       // 短暫延遲讓用戶看到收集完成的狀態
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await sleep(500);
 
       // Show preview modal
       const showingPreviewText = translations?.ui?.showingPreview || '📋 顯示預覽...';
@@ -514,7 +515,7 @@ chrome.runtime.onMessage.addListener(async function(request, sender, sendRespons
     if (!slackThreadExtractor) {
       initializeExtractor();
       // Wait a bit for initialization
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await sleep(100);
     }
     
     if (request.action === 'extractThreadMessages') {

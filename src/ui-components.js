@@ -3,6 +3,8 @@
  * Handles creation and management of UI elements like buttons and modals
  */
 
+import { sleep, debounce } from './time-utils.js';
+
 /**
  * Summary Button Manager
  * Handles creation and management of the summary button
