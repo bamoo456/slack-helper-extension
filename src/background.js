@@ -2,7 +2,8 @@
 
 // Import all Gemini-related utilities from gemini-utils.js
 import {
-  BackgroundModelSyncManager,
+  triggerBackgroundModelSync,
+  getBackgroundSyncState,
   syncAvailableModels,
   handleGeminiSummaryRequest,
   getAvailableModels,
@@ -105,9 +106,6 @@ async function broadcastLanguageChange(newLanguage) {
   }
 }
 
-// 創建背景同步管理器實例
-const backgroundSyncManager = new BackgroundModelSyncManager();
-
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   console.log('Background received message:', request);
   
@@ -140,7 +138,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     // 處理手動觸發背景同步請求
     console.log(getTranslation('background.syncRequestReceived', '收到手動同步請求'));
     
-    backgroundSyncManager.manualSync()
+    triggerBackgroundModelSync()
       .then(() => {
         console.log(getTranslation('background.syncCompleted', '手動同步成功完成'));
         sendResponse({ 
@@ -163,11 +161,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     const now = Date.now();
     let status, message;
     
-    if (backgroundSyncManager.isSyncing) {
+    const syncState = getBackgroundSyncState();
+    
+    if (syncState.isSyncing) {
       status = 'syncing';
       message = getTranslation('background.syncInProgress', '背景同步進行中...');
-    } else if (backgroundSyncManager.lastSyncTime > 0) {
-      const timeDiff = now - backgroundSyncManager.lastSyncTime;
+      sendResponse({ status, message });
+    } else if (syncState.lastSyncTime > 0) {
+      const timeDiff = now - syncState.lastSyncTime;
       const minutes = Math.floor(timeDiff / (1000 * 60));
       const hours = Math.floor(minutes / 60);
       
@@ -184,6 +185,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         status = 'unknown';
         message = getTranslation('background.syncNeedsUpdate', '需要重新同步');
       }
+      sendResponse({ status, message });
     } else {
       // 檢查 storage 中的最後更新時間
       chrome.storage.local.get(['modelsLastUpdated'], (result) => {
@@ -193,32 +195,23 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           const hours = Math.floor(timeDiff / (1000 * 60 * 60));
           
           if (hours < 1) {
-            sendResponse({
-              status: 'synced',
-              message: getTranslation('background.syncedRecently', '模型已同步 (< 1小時前)')
-            });
+            status = 'synced';
+            message = getTranslation('background.syncedRecently', '模型已同步 (< 1小時前)');
           } else if (hours < 24) {
-            sendResponse({
-              status: 'synced',
-              message: getTranslation('background.syncedHoursAgo', '模型已同步 ({{hours}}小時前)', { hours })
-            });
+            status = 'synced';
+            message = getTranslation('background.syncedHoursAgo', '模型已同步 ({{hours}}小時前)', { hours });
           } else {
-            sendResponse({
-              status: 'unknown',
-              message: getTranslation('background.syncNeedsRefresh', '模型需要更新')
-            });
+            status = 'unknown';
+            message = getTranslation('background.syncNeedsRefresh', '模型需要更新');
           }
         } else {
-          sendResponse({
-            status: 'error',
-            message: getTranslation('background.neverSynced', '尚未同步')
-          });
+          status = 'error';
+          message = getTranslation('background.neverSynced', '尚未同步');
         }
+        sendResponse({ status, message });
       });
       return true; // 保持異步響應開啟
     }
-    
-    sendResponse({ status, message });
   } else if (request.action === 'getAvailableModels') {
     console.log('📥 Background: Received getAvailableModels request');
     
@@ -330,9 +323,6 @@ function extractMessagesFromSlack() {
 chrome.runtime.onInstalled.addListener((details) => {
   console.log('Slack Helper installed');
   
-  // 初始化背景同步管理器
-  backgroundSyncManager.initialize();
-  
   if (details.reason === 'install') {
     console.log(getTranslation('background.firstInstall', '首次安裝完成'));
   } else if (details.reason === 'update') {
@@ -343,5 +333,5 @@ chrome.runtime.onInstalled.addListener((details) => {
 // 監聽擴充功能啟動事件
 chrome.runtime.onStartup.addListener(() => {
   console.log(getTranslation('background.chromeStartup', 'Chrome 啟動，初始化背景模型同步'));
-  backgroundSyncManager.initialize();
+  // 啟動時不需要立即同步，等待用戶操作時再同步
 }); 

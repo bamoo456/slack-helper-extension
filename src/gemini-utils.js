@@ -18,244 +18,239 @@ export const GEMINI_MODELS_CONFIG = {
 };
 
 /**
- * 背景模型同步管理器
+ * 背景同步狀態管理
  */
-export class BackgroundModelSyncManager {
-  constructor() {
-    this.isSyncing = false;
-    this.lastSyncTime = 0;
-    this.minSyncInterval = 10 * 60 * 1000; // 最小同步間隔 10 分鐘
+let backgroundSyncState = {
+  isSyncing: false,
+  lastSyncTime: 0,
+  minSyncInterval: 10 * 60 * 1000 // 最小同步間隔 10 分鐘
+};
+
+/**
+ * 手動觸發背景模型同步
+ * @returns {Promise<void>}
+ */
+export async function triggerBackgroundModelSync() {
+  console.log('🔄 手動觸發背景同步開始');
+  
+  try {
+    await performBackgroundModelSync(true); // 強制同步
+    console.log('✅ 手動背景同步成功完成');
+  } catch (error) {
+    console.error('❌ 手動背景同步失敗:', error);
+    throw error;
+  }
+}
+
+/**
+ * 執行背景模型同步
+ * @param {boolean} forceSync - 是否強制同步
+ * @returns {Promise<void>}
+ */
+export async function performBackgroundModelSync(forceSync = false) {
+  const now = Date.now();
+  
+  // 檢查是否需要同步
+  if (backgroundSyncState.isSyncing) {
+    console.log('同步正在進行中，跳過此次同步');
+    return;
+  }
+  
+  if (!forceSync && now - backgroundSyncState.lastSyncTime < backgroundSyncState.minSyncInterval) {
+    console.log('距離上次同步時間太短，跳過此次同步');
+    return;
   }
 
-  /**
-   * 初始化背景同步
-   */
-  initialize() {
-    console.log('初始化背景模型同步管理器');
-  }
-
-  /**
-   * 檢查並執行同步
-   */
-  async checkAndSync(forceSync = false) {
-    const now = Date.now();
-    
-    // 檢查是否需要同步
-    if (this.isSyncing) {
-      console.log('同步正在進行中，跳過此次同步');
-      return;
-    }
-    
-    if (now - this.lastSyncTime < this.minSyncInterval) {
-      console.log('距離上次同步時間太短，跳過此次同步');
-      return;
-    }
-
-    // 檢查 storage 中的最後更新時間
-    const shouldSync = await this.shouldPerformSync();
-    if (!shouldSync && !forceSync) {
+  // 檢查 storage 中的最後更新時間
+  if (!forceSync) {
+    const shouldSync = await checkIfSyncNeeded();
+    if (!shouldSync) {
       console.log('模型列表仍然有效，跳過同步');
       return;
     }
-
-    console.log('開始背景模型同步...');
-    await this.performBackgroundSync();
   }
 
-  /**
-   * 檢查是否應該執行同步
-   */
-  async shouldPerformSync() {
-    return new Promise((resolve) => {
-      chrome.storage.local.get(['modelsLastUpdated'], (result) => {
-        const lastUpdated = result.modelsLastUpdated || 0;
-        const now = Date.now();
-        const maxAge = 24 * 60 * 60 * 1000; // 24 小時
-        
-        // 如果超過 24 小時沒有更新，則需要同步
-        resolve(now - lastUpdated > maxAge);
-      });
+  backgroundSyncState.isSyncing = true;
+  backgroundSyncState.lastSyncTime = now;
+
+  let geminiTab = null;
+  const syncTimeout = 60000; // 60 seconds timeout
+
+  try {
+    console.log('🔄 開始背景模型同步流程...');
+    
+    // 創建一個隱藏的 Gemini 頁面進行同步
+    geminiTab = await chrome.tabs.create({
+      url: 'https://gemini.google.com/app',
+      active: false // 在背景開啟，不切換到該頁面
     });
-  }
 
-  /**
-   * 執行背景同步
-   */
-  async performBackgroundSync() {
-    if (this.isSyncing) return;
-    
-    this.isSyncing = true;
-    this.lastSyncTime = Date.now();
+    console.log(`背景開啟 Gemini 頁面進行同步，Tab ID: ${geminiTab.id}`);
 
-    let geminiTab = null;
-    const syncTimeout = 60000; // 60 seconds timeout
-
-    try {
-      console.log('🔄 開始背景模型同步流程...');
-      
-      // 創建一個隱藏的 Gemini 頁面進行同步
-      geminiTab = await chrome.tabs.create({
-        url: 'https://gemini.google.com/app',
-        active: false // 在背景開啟，不切換到該頁面
-      });
-
-      console.log(`背景開啟 Gemini 頁面進行同步，Tab ID: ${geminiTab.id}`);
-
-      // 使用 Promise.race 來添加總體超時控制
-      await Promise.race([
-        this.performSyncWithTab(geminiTab.id),
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('同步操作超時')), syncTimeout)
-        )
-      ]);
-
-      console.log('✅ 背景同步流程成功完成');
-
-    } catch (error) {
-      console.error('❌ 背景同步失敗:', error);
-      throw error;
-    } finally {
-      // 確保頁面被關閉
-      if (geminiTab && geminiTab.id) {
-        try {
-          await chrome.tabs.remove(geminiTab.id);
-          console.log('已關閉背景 Gemini 頁面');
-        } catch (closeError) {
-          console.warn('關閉頁面時發生錯誤:', closeError);
-        }
-      }
-      this.isSyncing = false;
-    }
-  }
-
-  /**
-   * 執行同步操作（分離出來以便更好的錯誤處理）
-   */
-  async performSyncWithTab(tabId) {
-    // 等待頁面載入完成
-    console.log('📄 等待頁面載入完成...');
-    await this.waitForTabLoad(tabId);
-    
-    // 使用 waitForGeminiPageReady 確保頁面完全準備就緒
-    console.log('🔍 檢查頁面準備狀態...');
-    await waitForGeminiPageReady(tabId);
-    console.log('✅ 背景 Gemini 頁面已準備就緒');
-
-    // 執行模型同步
-    console.log('🔄 開始執行模型同步...');
-    await this.syncModelsInTab(tabId);
-    console.log('✅ 背景模型同步操作完成');
-  }
-
-  /**
-   * 等待頁面載入完成
-   */
-  async waitForTabLoad(tabId) {
-    const loadTimeout = 30000; // 30 seconds timeout
-    
-    return Promise.race([
-      new Promise((resolve) => {
-        const listener = (updatedTabId, changeInfo, _tab) => {
-          if (updatedTabId === tabId && changeInfo.status === 'complete') {
-            chrome.tabs.onUpdated.removeListener(listener);
-            console.log(`📄 Tab ${tabId} 載入完成，等待 3 秒確保穩定性...`);
-            // 額外等待 3 秒確保頁面完全載入
-            setTimeout(resolve, 3000);
-          }
-        };
-        chrome.tabs.onUpdated.addListener(listener);
-        
-        // 檢查頁面是否已經載入完成
-        chrome.tabs.get(tabId, (tab) => {
-          if (chrome.runtime.lastError) {
-            console.warn('無法獲取 tab 資訊:', chrome.runtime.lastError);
-            return;
-          }
-          if (tab && tab.status === 'complete') {
-            chrome.tabs.onUpdated.removeListener(listener);
-            console.log(`📄 Tab ${tabId} 已經載入完成`);
-            setTimeout(resolve, 1000);
-          }
-        });
-      }),
+    // 使用 Promise.race 來添加總體超時控制
+    await Promise.race([
+      performSyncWithTab(geminiTab.id),
       new Promise((_, reject) => 
-        setTimeout(() => {
-          reject(new Error(`頁面載入超時 (${loadTimeout/1000} 秒)`));
-        }, loadTimeout)
+        setTimeout(() => reject(new Error('同步操作超時')), syncTimeout)
       )
     ]);
-  }
 
-  /**
-   * 在指定頁面中同步模型
-   */
-  async syncModelsInTab(tabId) {
-    const syncTimeout = 30000; // 30 seconds timeout for individual sync operation
-    
-    try {
-      console.log(`🔄 開始在 Tab ${tabId} 中同步模型...`);
+    console.log('✅ 背景同步流程成功完成');
+
+  } catch (error) {
+    console.error('❌ 背景同步失敗:', error);
+    throw error;
+  } finally {
+    // 確保頁面被關閉
+    if (geminiTab && geminiTab.id) {
+      try {
+        await chrome.tabs.remove(geminiTab.id);
+        console.log('已關閉背景 Gemini 頁面');
+      } catch (closeError) {
+        console.warn('關閉頁面時發生錯誤:', closeError);
+      }
+    }
+    backgroundSyncState.isSyncing = false;
+  }
+}
+
+/**
+ * 檢查是否需要執行同步
+ * @returns {Promise<boolean>}
+ */
+async function checkIfSyncNeeded() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(['modelsLastUpdated'], (result) => {
+      const lastUpdated = result.modelsLastUpdated || 0;
+      const now = Date.now();
+      const maxAge = 24 * 60 * 60 * 1000; // 24 小時
       
-      // 檢查 storage 中是否有最近的模型數據
-      const currentTime = Date.now();
-      const storageCheck = await new Promise((resolve) => {
-        chrome.storage.local.get(['availableGeminiModels', 'modelsLastUpdated'], (result) => {
-          const models = result.availableGeminiModels || [];
-          const lastUpdated = result.modelsLastUpdated || 0;
-          const timeDiff = currentTime - lastUpdated;
-          
-          resolve({
-            hasModels: models.length > 0,
-            isRecent: timeDiff < 5000, // 如果 5 秒內已更新，跳過重複同步
-            models: models,
-            lastUpdated: lastUpdated
-          });
+      // 如果超過 24 小時沒有更新，則需要同步
+      resolve(now - lastUpdated > maxAge);
+    });
+  });
+}
+
+/**
+ * 執行同步操作（分離出來以便更好的錯誤處理）
+ * @param {number} tabId - 頁面 ID
+ * @returns {Promise<void>}
+ */
+async function performSyncWithTab(tabId) {
+  // 等待頁面載入完成
+  console.log('📄 等待頁面載入完成...');
+  await waitForTabLoad(tabId);
+  
+  // 使用 waitForGeminiPageReady 確保頁面完全準備就緒
+  console.log('🔍 檢查頁面準備狀態...');
+  await waitForGeminiPageReady(tabId);
+  console.log('✅ 背景 Gemini 頁面已準備就緒');
+
+  // 執行模型同步
+  console.log('🔄 開始執行模型同步...');
+  await syncModelsInTab(tabId);
+  console.log('✅ 背景模型同步操作完成');
+}
+
+/**
+ * 等待頁面載入完成
+ * @param {number} tabId - 頁面 ID
+ * @returns {Promise<void>}
+ */
+async function waitForTabLoad(tabId) {
+  const loadTimeout = 30000; // 30 seconds timeout
+  
+  return Promise.race([
+    new Promise((resolve) => {
+      const listener = (updatedTabId, changeInfo, _tab) => {
+        if (updatedTabId === tabId && changeInfo.status === 'complete') {
+          chrome.tabs.onUpdated.removeListener(listener);
+          console.log(`📄 Tab ${tabId} 載入完成，等待 3 秒確保穩定性...`);
+          // 額外等待 3 秒確保頁面完全載入
+          setTimeout(resolve, 3000);
+        }
+      };
+      chrome.tabs.onUpdated.addListener(listener);
+      
+      // 檢查頁面是否已經載入完成
+      chrome.tabs.get(tabId, (tab) => {
+        if (chrome.runtime.lastError) {
+          console.warn('無法獲取 tab 資訊:', chrome.runtime.lastError);
+          return;
+        }
+        if (tab && tab.status === 'complete') {
+          chrome.tabs.onUpdated.removeListener(listener);
+          console.log(`📄 Tab ${tabId} 已經載入完成`);
+          setTimeout(resolve, 1000);
+        }
+      });
+    }),
+    new Promise((_, reject) => 
+      setTimeout(() => {
+        reject(new Error(`頁面載入超時 (${loadTimeout/1000} 秒)`));
+      }, loadTimeout)
+    )
+  ]);
+}
+
+/**
+ * 在指定頁面中同步模型
+ * @param {number} tabId - 頁面 ID
+ * @returns {Promise<void>}
+ */
+async function syncModelsInTab(tabId) {
+  const syncTimeout = 30000; // 30 seconds timeout for individual sync operation
+  
+  try {
+    console.log(`🔄 開始在 Tab ${tabId} 中同步模型...`);
+    
+    // 檢查 storage 中是否有最近的模型數據
+    const currentTime = Date.now();
+    const storageCheck = await new Promise((resolve) => {
+      chrome.storage.local.get(['availableGeminiModels', 'modelsLastUpdated'], (result) => {
+        const models = result.availableGeminiModels || [];
+        const lastUpdated = result.modelsLastUpdated || 0;
+        const timeDiff = currentTime - lastUpdated;
+        
+        resolve({
+          hasModels: models.length > 0,
+          isRecent: timeDiff < 5000, // 如果 5 秒內已更新，跳過重複同步
+          models: models,
+          lastUpdated: lastUpdated
         });
       });
-      
-      if (storageCheck.hasModels && storageCheck.isRecent) {
-        console.log('✅ 模型已在最近同步完成，跳過重複同步');
-        console.log(`📋 使用現有的 ${storageCheck.models.length} 個模型`);
-        return;
-      }
-      
-      // 使用 Promise.race 來添加超時控制
-      await Promise.race([
-        syncAvailableModels(tabId),
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('模型同步操作超時')), syncTimeout)
-        )
-      ]);
-      
-      console.log('✅ 背景模型同步成功');
-    } catch (error) {
-      console.error('❌ 背景模型同步失敗:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * 手動觸發同步
-   */
-  async manualSync() {
-    console.log('🔄 手動觸發背景同步開始');
-    this.lastSyncTime = 0; // 重置時間限制
+    });
     
-    try {
-      await this.checkAndSync(true);
-      console.log('✅ 手動背景同步成功完成');
-    } catch (error) {
-      console.error('❌ 手動背景同步失敗:', error);
-      throw error;
+    if (storageCheck.hasModels && storageCheck.isRecent) {
+      console.log('✅ 模型已在最近同步完成，跳過重複同步');
+      console.log(`📋 使用現有的 ${storageCheck.models.length} 個模型`);
+      return;
     }
+    
+    // 使用 Promise.race 來添加超時控制
+    await Promise.race([
+      syncAvailableModels(tabId),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('模型同步操作超時')), syncTimeout)
+      )
+    ]);
+    
+    console.log('✅ 背景模型同步成功');
+  } catch (error) {
+    console.error('❌ 背景模型同步失敗:', error);
+    throw error;
   }
+}
 
-  /**
-   * 停止背景同步
-   */
-  stop() {
-    this.isSyncing = false;
-    console.log('背景模型同步已停止');
-  }
+/**
+ * 獲取背景同步狀態
+ * @returns {Object} 同步狀態信息
+ */
+export function getBackgroundSyncState() {
+  return {
+    isSyncing: backgroundSyncState.isSyncing,
+    lastSyncTime: backgroundSyncState.lastSyncTime
+  };
 }
 
 /**
