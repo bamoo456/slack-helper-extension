@@ -2,7 +2,7 @@
 
 // Import all Gemini-related utilities from gemini-utils.js
 import {
-  triggerBackgroundModelSync,
+  performBackgroundModelSync,
   getBackgroundSyncState,
   syncAvailableModels,
   handleGeminiSummaryRequest,
@@ -138,7 +138,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     // 處理手動觸發背景同步請求
     console.log(getTranslation('background.syncRequestReceived', '收到手動同步請求'));
     
-    triggerBackgroundModelSync()
+    performBackgroundModelSync(true)
       .then(() => {
         console.log(getTranslation('background.syncCompleted', '手動同步成功完成'));
         sendResponse({ 
