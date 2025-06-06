@@ -8,6 +8,7 @@ import { MessageTextExtractor } from './message-extractor.js';
 import { MessageProcessor } from './message-processor.js';
 import { ThreadScrollCollector } from './scroll-collector.js';
 import { SummaryButtonManager, ThreadAnalyzer, PreviewModalManager, PageObserver } from './ui-components.js';
+import { SlackInputEnhancer } from './input-enhancer.js';
 import { isGeminiPage } from './model-sync.js';
 import { sleep } from './time-utils.js';
 
@@ -31,6 +32,7 @@ class SlackThreadExtractor {
     this.buttonManager = new SummaryButtonManager();
     this.threadAnalyzer = new ThreadAnalyzer();
     this.previewModal = new PreviewModalManager();
+    this.inputEnhancer = new SlackInputEnhancer();
     this.pageObserver = new PageObserver(() => {
       // 使用 Promise 來處理異步調用，但不等待結果
       this.addSummaryButton().catch(error => {
@@ -47,6 +49,7 @@ class SlackThreadExtractor {
       console.log('Initializing SlackThreadExtractor...');
       
       // Initialize components
+      await this.inputEnhancer.init();
       this.initialized = true;
       console.log('✅ SlackThreadExtractor initialized successfully');
       
