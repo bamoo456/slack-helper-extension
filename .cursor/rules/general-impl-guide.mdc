@@ -1,0 +1,14 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+Implementation:
+* You should not over-thinking on what need to be implemented, only focus on what need to be done.
+* If you have uncertainity, just Ask before implement.
+* You can consider asking more questions to confirm scope before implementing things.
+
+
+Documents:
+* No need to add implementation, debug and test guide document after implementation.
+* Any test related files should not be persisted.
