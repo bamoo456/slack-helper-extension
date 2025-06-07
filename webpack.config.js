@@ -35,7 +35,8 @@ export default {
         { from: 'styles.css', to: 'styles.css' },
         { from: 'images', to: 'images' },
         { from: 'src/locales', to: 'locales' },
-        { from: 'src/injected-utils.js', to: 'src/injected-utils.js' }
+        { from: 'src/injected-utils.js', to: 'src/injected-utils.js' },
+        { from: 'src/message-helper.css', to: 'src/message-helper.css' }
       ]
     })
   ],

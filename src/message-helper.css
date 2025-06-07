@@ -1,0 +1,169 @@
+/* Slack Input Enhancer Styles */
+
+/* Toolbar refine button */
+.slack-helper-refine-btn-toolbar {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-width: 28px !important;
+  height: 28px !important;
+  margin: 0 4px !important;
+  background-color: #007a5a !important;
+  border: 1px solid #007a5a !important;
+  border-radius: 4px !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  color: white !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  flex-shrink: 0 !important;
+  position: relative !important;
+  z-index: 10 !important;
+  padding: 0 !important;
+  font-size: 14px !important;
+  line-height: 1 !important;
+}
+
+/* SVG icon inside toolbar button */
+.slack-helper-refine-btn-toolbar svg {
+  width: 16px !important;
+  height: 16px !important;
+  fill: currentColor !important;
+  color: inherit !important;
+}
+
+.slack-helper-refine-btn-toolbar:hover {
+  background-color: #005a3f !important;
+  border-color: #005a3f !important;
+  transform: scale(1.05) !important;
+}
+
+.slack-helper-refine-btn-toolbar:active {
+  background-color: #004d3d !important;
+  border-color: #004d3d !important;
+}
+
+/* Right wrapper for toolbar positioning */
+.slack-helper-right-wrapper {
+  margin-left: auto !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  flex-shrink: 0 !important;
+}
+
+/* Dropdown menu */
+.slack-helper-refine-dropdown {
+  position: absolute;
+  bottom: 100%;
+  right: 0;
+  margin-bottom: 4px;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 10000;
+  min-width: 200px;
+  overflow: hidden;
+  font-family: Slack-Lato, appleLogo, sans-serif;
+  transition: min-width 0.3s ease, max-width 0.3s ease;
+  pointer-events: auto;
+}
+
+/* Expanded dropdown for custom input */
+.slack-helper-refine-dropdown-expanded {
+  min-width: 380px;
+  max-width: 450px;
+}
+
+/* Dropdown menu items */
+.slack-helper-dropdown-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  border-bottom: 1px solid #f8f8f8;
+}
+
+.slack-helper-dropdown-item:hover {
+  background-color: #f8f8f8;
+}
+
+.slack-helper-dropdown-item:last-child {
+  border-bottom: none;
+}
+
+/* Dropdown item icon */
+.slack-helper-dropdown-icon {
+  margin-right: 8px;
+  font-size: 16px;
+}
+
+/* Dropdown item text */
+.slack-helper-dropdown-text {
+  flex: 1;
+}
+
+.slack-helper-dropdown-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1d1c1d;
+  margin-bottom: 2px;
+}
+
+/* Utility classes for positioning */
+.slack-helper-relative {
+  position: relative;
+}
+
+/* Hidden state */
+.slack-helper-hidden {
+  display: none;
+}
+
+/* Visible state */
+.slack-helper-visible {
+  display: block;
+}
+
+/* Custom prompt input container */
+.slack-helper-custom-prompt-container {
+  padding: 16px;
+  border-bottom: none;
+  pointer-events: auto;
+  position: relative;
+  z-index: 1001;
+}
+
+/* Custom prompt textarea */
+.slack-helper-custom-prompt-input {
+  width: 100%;
+  min-height: 80px;
+  padding: 12px 16px;
+  border: 2px solid #e0e0e0;
+  border-radius: 12px;
+  font-size: 14px;
+  font-family: Slack-Lato, appleLogo, sans-serif;
+  resize: vertical;
+  outline: none;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+  background-color: #fafafa;
+  line-height: 1.4;
+  z-index: 1001;
+  position: relative;
+  pointer-events: auto;
+}
+
+.slack-helper-custom-prompt-input:focus {
+  border-color: #007a5a;
+  box-shadow: 0 0 0 3px rgba(0, 122, 90, 0.1);
+  background-color: white;
+}
+
+.slack-helper-custom-prompt-input::placeholder {
+  color: #616061;
+}
+
+ 

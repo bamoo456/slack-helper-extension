@@ -43,7 +43,8 @@
         "src/locales/zh-TW/translation.json",
         "src/locales/en/translation.json",
         "src/locales/*/*.json",
-        "locales/*/*.json"
+        "locales/*/*.json",
+        "src/message-helper.css"
       ],
       "matches": ["<all_urls>"]
     }

@@ -3,7 +3,7 @@
  * Handles detection of Slack input areas and adds enhancement buttons
  */
 
-export class SlackInputEnhancer {
+export class MessageHelper {
   constructor() {
     this.inputSelectors = [
       '[data-qa="message_input"]',
@@ -12,11 +12,8 @@ export class SlackInputEnhancer {
       '.c-texty_input__container [contenteditable="true"]'
     ];
     
-    this.containerSelectors = [
-      '.c-texty_input_unstyled__container',
-      '.c-texty_input__container',
-      '.ql-container'
-    ];
+    // Load CSS styles
+    this.loadStyles();
     
     // 工具列選擇器
     this.toolbarSelectors = [
@@ -39,9 +36,41 @@ export class SlackInputEnhancer {
     ];
     
     this.observedInputs = new Set();
-    this.buttonInstances = new Map();
     this.toolbarButtonInstances = new Map();
+    this.currentDropdown = null;
     this.initialized = false;
+    
+    // Bind event handlers to maintain correct 'this' context
+    this.handleClickOutside = this.handleClickOutside.bind(this);
+    this.handleKeyDown = this.handleKeyDown.bind(this);
+  }
+
+  /**
+   * Load CSS styles for the input enhancer
+   */
+  loadStyles() {
+    // Check if styles are already loaded
+    if (document.querySelector('#slack-message-helper-styles')) {
+      return;
+    }
+
+    const link = document.createElement('link');
+    link.id = 'slack-message-helper-styles';
+    link.rel = 'stylesheet';
+    link.type = 'text/css';
+    link.href = chrome.runtime.getURL('src/message-helper.css');
+    
+    // Add load event listener to confirm CSS is loaded
+    link.addEventListener('load', () => {
+      console.log('✅ CSS styles successfully loaded:', link.href);
+    });
+    
+    link.addEventListener('error', (e) => {
+      console.error('❌ Failed to load CSS styles:', e);
+    });
+    
+    document.head.appendChild(link);
+    console.log('🔧 CSS link added to head:', link.href);
   }
 
   /**
@@ -50,7 +79,7 @@ export class SlackInputEnhancer {
   async init() {
     if (this.initialized) return;
     
-    console.log('🔧 Initializing SlackInputEnhancer...');
+    console.log('🔧 Initializing MessageHelper...');
     
     // Start observing for input elements
     this.startObserving();
@@ -59,7 +88,7 @@ export class SlackInputEnhancer {
     this.processExistingInputs();
     
     this.initialized = true;
-    console.log('✅ SlackInputEnhancer initialized');
+    console.log('✅ MessageHelper initialized');
   }
 
   /**
@@ -190,27 +219,15 @@ export class SlackInputEnhancer {
 
     console.log('🔧 Enhancing input element:', inputElement);
 
-    // Find the toolbar for the input (preferred location)
+    // Find the toolbar for the input
     const toolbar = this.findToolbarForInput(inputElement);
     if (toolbar) {
       console.log('✅ Found toolbar for input, adding button to toolbar');
-      this.addInputEventListeners(inputElement, null, toolbar);
+      this.showRefineButtonInToolbar(inputElement, toolbar);
       this.observedInputs.add(inputElement);
-      return;
+    } else {
+      console.log('❌ No suitable toolbar found for input');
     }
-
-    // Fallback: Find the container for the input
-    const container = this.findInputContainer(inputElement);
-    if (!container) {
-      console.log('❌ No suitable container found for input');
-      return;
-    }
-
-    // Add focus/blur event listeners to show/hide button
-    this.addInputEventListeners(inputElement, container, null);
-    
-    // Mark as observed
-    this.observedInputs.add(inputElement);
   }
 
   /**
@@ -315,59 +332,6 @@ export class SlackInputEnhancer {
   }
 
   /**
-   * Find the container element for an input
-   * @param {Element} inputElement - The input element
-   * @returns {Element|null} The container element
-   */
-  findInputContainer(inputElement) {
-    // Try to find the container using known selectors
-    for (const selector of this.containerSelectors) {
-      const container = inputElement.closest(selector);
-      if (container) {
-        return container;
-      }
-    }
-
-    // Fallback: use the parent element
-    return inputElement.parentElement;
-  }
-
-  /**
-   * Add event listeners to an input element
-   * @param {Element} inputElement - The input element
-   * @param {Element} container - The container element (fallback)
-   * @param {Element} toolbar - The toolbar element (preferred)
-   */
-  addInputEventListeners(inputElement, container, toolbar) {
-    // Show button immediately for toolbar (persistent), on focus for container
-    if (toolbar) {
-      // For toolbar: show button immediately and keep it visible
-      this.showRefineButtonInToolbar(inputElement, toolbar);
-    } else {
-      // For container: show/hide on focus/blur (original behavior)
-      const showButton = () => {
-        this.showRefineButton(inputElement, container);
-      };
-
-      const hideButton = () => {
-        setTimeout(() => {
-          if (document.activeElement !== inputElement && 
-              !this.isRefineButtonFocused(container)) {
-            this.hideRefineButton(container);
-          }
-        }, 150);
-      };
-
-      // Add event listeners for container mode
-      inputElement.addEventListener('focus', showButton);
-      inputElement.addEventListener('blur', hideButton);
-      inputElement.addEventListener('input', showButton);
-    }
-
-    console.log('✅ Added event listeners to input element');
-  }
-
-  /**
    * Show the refine message button in toolbar (persistent)
    * @param {Element} inputElement - The input element
    * @param {Element} toolbar - The toolbar element
@@ -380,10 +344,9 @@ export class SlackInputEnhancer {
       const button = this.toolbarButtonInstances.get(toolbar);
       if (button && button.parentElement) {
         console.log('✅ Button already exists in toolbar, ensuring visibility');
-        // Ensure button is visible
-        button.style.setProperty('display', 'inline-flex', 'important');
-        button.style.setProperty('opacity', '1', 'important');
-        button.style.setProperty('visibility', 'visible', 'important');
+        // Ensure button is visible by removing hidden class
+        button.classList.remove('slack-helper-hidden');
+        button.classList.add('slack-helper-visible');
         return;
       }
     }
@@ -407,68 +370,6 @@ export class SlackInputEnhancer {
     } else {
       console.log('❌ No insert position found for toolbar button');
     }
-  }
-
-  /**
-   * Show the refine message button
-   * @param {Element} inputElement - The input element
-   * @param {Element} container - The container element
-   */
-  showRefineButton(inputElement, container) {
-    // Check if button already exists
-    if (this.buttonInstances.has(container)) {
-      const button = this.buttonInstances.get(container);
-      if (button && button.parentElement) {
-        button.style.display = 'block';
-        return;
-      }
-    }
-
-    // Create the button
-    const button = this.createRefineButton();
-    
-    // Find the best position to insert the button
-    const insertPosition = this.findButtonInsertPosition(container);
-    if (insertPosition) {
-      insertPosition.appendChild(button);
-      this.buttonInstances.set(container, button);
-      console.log('✅ Refine button shown');
-    }
-  }
-
-  /**
-   * Hide the refine message button
-   * @param {Element} container - The container element
-   */
-  hideRefineButton(container) {
-    const button = this.buttonInstances.get(container);
-    if (button) {
-      button.style.display = 'none';
-      console.log('🔒 Refine button hidden');
-    }
-  }
-
-  /**
-   * Check if the refine button is currently focused
-   * @param {Element} container - The container element
-   * @returns {boolean} True if the button is focused
-   */
-  isRefineButtonFocused(container) {
-    const button = this.buttonInstances.get(container);
-    return button && (document.activeElement === button || button.contains(document.activeElement));
-  }
-
-  /**
-   * Check if any toolbar refine button is currently focused
-   * @returns {boolean} True if any toolbar button is focused
-   */
-  isAnyToolbarButtonFocused() {
-    for (const button of this.toolbarButtonInstances.values()) {
-      if (button && (document.activeElement === button || button.contains(document.activeElement))) {
-        return true;
-      }
-    }
-    return false;
   }
 
   /**
@@ -501,99 +402,8 @@ export class SlackInputEnhancer {
     
     svg.appendChild(path);
     button.appendChild(svg);
-    
-    // Add styles to match Slack toolbar buttons with enhanced visibility
-    Object.assign(button.style, {
-      display: 'inline-flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      minWidth: '28px',
-      height: '28px',
-      margin: '0 4px',
-      backgroundColor: '#007a5a', // Green background to make it more visible
-      border: '1px solid #007a5a',
-      borderRadius: '4px',
-      cursor: 'pointer',
-      transition: 'all 0.2s ease',
-      color: 'white', // White icon for contrast
-      opacity: '1',
-      visibility: 'visible',
-      flexShrink: '0', // Prevent shrinking
-      position: 'relative',
-      zIndex: '10'
-    });
-    
-    // Force visibility with important styles
-    button.style.setProperty('display', 'inline-flex', 'important');
-    button.style.setProperty('opacity', '1', 'important');
-    button.style.setProperty('visibility', 'visible', 'important');
-    button.style.setProperty('background-color', '#007a5a', 'important');
-    button.style.setProperty('color', 'white', 'important');
-
-    // Add hover effects to match Slack style
-    button.addEventListener('mouseenter', () => {
-      button.style.backgroundColor = '#005a3f';
-      button.style.borderColor = '#005a3f';
-      button.style.transform = 'scale(1.05)';
-    });
-
-    button.addEventListener('mouseleave', () => {
-      button.style.backgroundColor = '#007a5a';
-      button.style.borderColor = '#007a5a';
-      button.style.transform = 'scale(1)';
-    });
 
     // Add click handler
-    button.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      this.handleRefineClick(button);
-    });
-
-    return button;
-  }
-
-  /**
-   * Create the refine message button
-   * @returns {Element} The button element
-   */
-  createRefineButton() {
-    const button = document.createElement('button');
-    button.className = 'slack-helper-refine-btn';
-    button.textContent = '✨ Refine Message';
-    button.type = 'button';
-    
-    // Add styles
-    Object.assign(button.style, {
-      position: 'absolute',
-      top: '8px',
-      right: '8px',
-      zIndex: '1000',
-      padding: '4px 8px',
-      fontSize: '12px',
-      backgroundColor: '#007a5a',
-      color: 'white',
-      border: 'none',
-      borderRadius: '4px',
-      cursor: 'pointer',
-      fontFamily: 'Slack-Lato, appleLogo, sans-serif',
-      fontWeight: '600',
-      transition: 'all 0.2s ease',
-      display: 'block'
-    });
-
-    // Add hover effects
-    button.addEventListener('mouseenter', () => {
-      button.style.backgroundColor = '#005a3f';
-      button.style.transform = 'scale(1.05)';
-    });
-
-    button.addEventListener('mouseleave', () => {
-      button.style.backgroundColor = '#007a5a';
-      button.style.transform = 'scale(1)';
-    });
-
-    // Add click handler (placeholder for now)
     button.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -616,32 +426,11 @@ export class SlackInputEnhancer {
     if (!rightWrapper) {
       rightWrapper = document.createElement('div');
       rightWrapper.className = 'slack-helper-right-wrapper';
-      rightWrapper.style.cssText = `
-        margin-left: auto;
-        display: flex;
-        align-items: center;
-        gap: 4px;
-      `;
       toolbar.appendChild(rightWrapper);
       console.log('✅ Created right wrapper for button positioning');
     }
     
     return rightWrapper;
-  }
-
-  /**
-   * Find the best position to insert the button
-   * @param {Element} container - The container element
-   * @returns {Element|null} The element to insert the button into
-   */
-  findButtonInsertPosition(container) {
-    // Make sure the container has relative positioning for absolute button positioning
-    const computedStyle = window.getComputedStyle(container);
-    if (computedStyle.position === 'static') {
-      container.style.position = 'relative';
-    }
-
-    return container;
   }
 
   /**
@@ -651,15 +440,352 @@ export class SlackInputEnhancer {
   handleRefineClick(button) {
     console.log('🔧 Refine message button clicked');
     
-    // Add visual feedback
-    button.style.backgroundColor = '#004d3d';
-    setTimeout(() => {
-      button.style.backgroundColor = '#007a5a';
-    }, 200);
+    // Check if dropdown is already open
+    if (this.currentDropdown) {
+      console.log('🔒 Dropdown already open, hiding it');
+      this.hideRefineDropdown();
+    } else {
+      console.log('📂 Opening dropdown');
+      this.showRefineDropdown(button);
+    }
+  }
 
-    // TODO: Implement refine message logic
-    // For now, just show an alert
-    alert('Refine message functionality will be implemented here!');
+  /**
+   * Show the refine dropdown menu
+   * @param {Element} button - The button that was clicked
+   */
+  showRefineDropdown(button) {
+    // Create dropdown container
+    const dropdown = document.createElement('div');
+    dropdown.className = 'slack-helper-refine-dropdown slack-helper-refine-dropdown-expanded';
+
+    // Create custom prompt input area directly (no header)
+    const inputContainer = document.createElement('div');
+    inputContainer.className = 'slack-helper-custom-prompt-container';
+    
+    // Add inline styles as fallback
+    Object.assign(inputContainer.style, {
+      padding: '16px',
+      pointerEvents: 'auto',
+      position: 'relative',
+      zIndex: '1001'
+    });
+    
+    // Create textarea for custom prompt
+    const textarea = document.createElement('textarea');
+    textarea.className = 'slack-helper-custom-prompt-input';
+    textarea.placeholder = 'Modify with a prompt... (Ctrl+Enter to apply)';
+    textarea.rows = 3;
+    textarea.setAttribute('tabindex', '0');
+    textarea.setAttribute('spellcheck', 'true');
+    textarea.setAttribute('autocomplete', 'off');
+    
+    // Add inline styles as fallback to ensure styling works
+    Object.assign(textarea.style, {
+      width: '100%',
+      minHeight: '80px',
+      padding: '12px 16px',
+      border: '2px solid #e0e0e0',
+      borderRadius: '12px',
+      fontSize: '14px',
+      fontFamily: 'Slack-Lato, appleLogo, sans-serif',
+      resize: 'vertical',
+      outline: 'none',
+      transition: 'all 0.2s ease',
+      boxSizing: 'border-box',
+      backgroundColor: '#fafafa',
+      lineHeight: '1.4',
+      zIndex: '1001'
+    });
+    
+    // Add comprehensive event handling to prevent Slack interference
+    textarea.addEventListener('keydown', (e) => {
+      // Handle ESC key to close dropdown
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        this.hideRefineDropdown();
+        console.log('🔒 Dropdown closed by ESC key from textarea');
+        return;
+      }
+      
+      // Handle Ctrl+Enter to apply
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        e.stopPropagation();
+        const customPrompt = textarea.value.trim();
+        if (customPrompt) {
+          this.handleCustomPrompt(customPrompt, button);
+          this.hideRefineDropdown();
+        } else {
+          textarea.focus();
+        }
+        return;
+      }
+      
+      // For other keys, stop propagation to prevent Slack from intercepting
+      e.stopPropagation();
+    });
+    
+    textarea.addEventListener('keypress', (e) => {
+      // Don't stop propagation for ESC key
+      if (e.key !== 'Escape') {
+        e.stopPropagation();
+      }
+    });
+    
+    textarea.addEventListener('keyup', (e) => {
+      // Don't stop propagation for ESC key
+      if (e.key !== 'Escape') {
+        e.stopPropagation();
+      }
+    });
+    
+    textarea.addEventListener('input', (e) => {
+      // Stop event propagation for input events
+      e.stopPropagation();
+    });
+    
+    textarea.addEventListener('focus', (e) => {
+      console.log('🔧 Textarea focused');
+      e.stopPropagation();
+    });
+    
+    textarea.addEventListener('blur', (e) => {
+      console.log('🔧 Textarea blurred');
+      e.stopPropagation();
+    });
+    
+    textarea.addEventListener('click', (e) => {
+      console.log('🔧 Textarea clicked');
+      e.stopPropagation();
+      textarea.focus();
+    });
+    
+    // Assemble the input container
+    inputContainer.appendChild(textarea);
+    
+    dropdown.appendChild(inputContainer);
+    
+    // Focus on textarea after a short delay and ensure it's really focused
+    setTimeout(() => {
+      textarea.focus();
+      textarea.click();
+      console.log('🔧 Textarea focus attempted');
+    }, 150);
+
+    // Create menu items
+    const menuItems = [
+      {
+        icon: '✏️',
+        text: 'Rephrase'
+      },
+      {
+        icon: '✨',
+        text: 'Refine'
+      },
+      {
+        icon: '🔧',
+        text: 'Fix grammar'
+      }
+    ];
+
+    menuItems.forEach(item => {
+      const menuItem = document.createElement('div');
+      menuItem.className = 'slack-helper-dropdown-item';
+
+      menuItem.innerHTML = `
+        <span class="slack-helper-dropdown-icon">${item.icon}</span>
+        <div class="slack-helper-dropdown-text">
+          <div class="slack-helper-dropdown-title">
+            ${item.text}
+          </div>
+        </div>
+      `;
+
+      // Add click handler
+      menuItem.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.handleRefineAction(item.text, button);
+        this.hideRefineDropdown();
+      });
+
+      dropdown.appendChild(menuItem);
+    });
+
+    // Position dropdown relative to button
+    const buttonRect = button.getBoundingClientRect();
+    const buttonParent = button.parentElement;
+    
+    // Make sure parent has relative positioning
+    if (getComputedStyle(buttonParent).position === 'static') {
+      buttonParent.classList.add('slack-helper-relative');
+    }
+
+    buttonParent.appendChild(dropdown);
+
+    // Store reference for cleanup
+    this.currentDropdown = dropdown;
+
+    // Add click outside listener to close dropdown
+    setTimeout(() => {
+      document.addEventListener('click', this.handleClickOutside);
+      document.addEventListener('keydown', this.handleKeyDown);
+    }, 0);
+
+    console.log('✅ Refine dropdown shown');
+  }
+
+  /**
+   * Handle custom prompt action
+   * @param {string} customPrompt - The custom prompt text
+   * @param {Element} button - The button that was clicked
+   */
+  handleCustomPrompt(customPrompt, button) {
+    console.log('🔧 Custom prompt entered:', customPrompt);
+    
+    // Find the input element associated with this button
+    const inputElement = this.findInputForButton(button);
+    if (!inputElement) {
+      console.log('❌ Could not find input element for button');
+      return;
+    }
+
+    // Get current message content
+    const currentText = inputElement.textContent || inputElement.value || '';
+    
+    if (!currentText.trim()) {
+      alert('Please type a message first before applying custom prompt.');
+      return;
+    }
+
+    // TODO: Implement actual AI processing with custom prompt
+    // For now, show what would happen
+    alert(`Custom Prompt: "${customPrompt}"\n\nOriginal: "${currentText}"\n\nThis feature will be implemented with AI integration.`);
+  }
+
+  /**
+   * Hide the refine dropdown menu
+   */
+  hideRefineDropdown() {
+    if (this.currentDropdown) {
+      console.log('🔧 Hiding refine dropdown...');
+      
+      // Remove event listeners first
+      document.removeEventListener('click', this.handleClickOutside);
+      document.removeEventListener('keydown', this.handleKeyDown);
+      console.log('🔧 Event listeners removed');
+      
+      // Remove expanded class before removing dropdown for smooth transition
+      this.currentDropdown.classList.remove('slack-helper-refine-dropdown-expanded');
+      
+      // Small delay to allow transition to complete
+      setTimeout(() => {
+        if (this.currentDropdown) {
+          this.currentDropdown.remove();
+          this.currentDropdown = null;
+          console.log('✅ Dropdown removed from DOM');
+        }
+      }, 100);
+    }
+  }
+
+  /**
+   * Handle click outside dropdown to close it
+   * @param {Event} event - The click event
+   */
+  handleClickOutside(event) {
+    if (this.currentDropdown && !this.currentDropdown.contains(event.target)) {
+      // Check if the click was on a refine button
+      const isRefineButton = event.target.closest('.slack-helper-refine-btn-toolbar');
+      if (!isRefineButton) {
+        this.hideRefineDropdown();
+        console.log('🔒 Dropdown closed by click outside');
+      }
+    }
+  }
+
+  /**
+   * Handle keyboard events for dropdown
+   * @param {KeyboardEvent} event - The keyboard event
+   */
+  handleKeyDown(event) {
+    if (this.currentDropdown && event.key === 'Escape') {
+      event.preventDefault();
+      event.stopPropagation();
+      this.hideRefineDropdown();
+      console.log('🔒 Dropdown closed by ESC key');
+    }
+  }
+
+  /**
+   * Handle refine action selection
+   * @param {string} action - The selected action
+   * @param {Element} button - The button that was clicked
+   */
+  handleRefineAction(action, button) {
+    console.log('🔧 Refine action selected:', action);
+    
+    // Find the input element associated with this button
+    const inputElement = this.findInputForButton(button);
+    if (!inputElement) {
+      console.log('❌ Could not find input element for button');
+      return;
+    }
+
+    // Get current message content
+    const currentText = inputElement.textContent || inputElement.value || '';
+    
+    if (!currentText.trim()) {
+      alert('Please type a message first before refining it.');
+      return;
+    }
+
+    // TODO: Implement actual AI refining logic
+    // For now, show what would happen
+    const actionMap = {
+      'Rephrase': 'Rephrasing your message...',
+      'Refine': 'Refining your message for better quality and clarity...',
+      'Fix grammar': 'Fixing grammar and spelling...'
+    };
+
+    alert(`${actionMap[action] || 'Processing...'}\n\nOriginal: "${currentText}"\n\nThis feature will be implemented with AI integration.`);
+  }
+
+  /**
+   * Find the input element associated with a button
+   * @param {Element} button - The button element
+   * @returns {Element|null} The associated input element
+   */
+  findInputForButton(button) {
+    // Find the toolbar that contains this button
+    const toolbar = button.closest('.c-wysiwyg_container__formatting') ||
+                   button.closest('[role="toolbar"]') ||
+                   button.closest('.slack-helper-right-wrapper')?.parentElement;
+    
+    if (!toolbar) {
+      return null;
+    }
+
+    // Find the composer container
+    const composer = toolbar.closest('[data-qa*="composer"]') ||
+                     toolbar.closest('.c-composer') ||
+                     toolbar.closest('.p-composer') ||
+                     toolbar.parentElement;
+
+    if (!composer) {
+      return null;
+    }
+
+    // Find the input within the composer
+    for (const selector of this.inputSelectors) {
+      const input = composer.querySelector(selector);
+      if (input) {
+        return input;
+      }
+    }
+
+    return null;
   }
 
   /**
@@ -679,24 +805,17 @@ export class SlackInputEnhancer {
       this.observer.disconnect();
     }
     
-    // Remove all button instances
-    this.buttonInstances.forEach(button => {
-      if (button.parentElement) {
-        button.parentElement.removeChild(button);
-      }
-    });
-    
+    // Remove all toolbar button instances
     this.toolbarButtonInstances.forEach(button => {
       if (button.parentElement) {
         button.parentElement.removeChild(button);
       }
     });
     
-    this.buttonInstances.clear();
     this.toolbarButtonInstances.clear();
     this.observedInputs.clear();
     this.initialized = false;
     
-    console.log('🧹 SlackInputEnhancer destroyed');
+    console.log('🧹 MessageHelper destroyed');
   }
 } 
