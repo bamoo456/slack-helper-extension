@@ -36,7 +36,9 @@ export default {
         { from: 'images', to: 'images' },
         { from: 'src/locales', to: 'locales' },
         { from: 'src/injected-utils.js', to: 'src/injected-utils.js' },
-        { from: 'src/message-helper.css', to: 'src/message-helper.css' }
+        { from: 'src/message-helper.css', to: 'src/message-helper.css' },
+        { from: 'src/llm-service.js', to: 'src/llm-service.js' },
+        { from: 'src/message-helper.js', to: 'src/message-helper.js' }
       ]
     })
   ],

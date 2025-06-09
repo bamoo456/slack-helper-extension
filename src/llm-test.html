@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM Service Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        textarea {
+            height: 100px;
+            resize: vertical;
+        }
+        button {
+            background: #007a5a;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #005a3a;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-left: 4px solid #007a5a;
+            border-radius: 4px;
+        }
+        .error {
+            border-left-color: #dc3545;
+            background: #f8d7da;
+        }
+        .status {
+            margin-bottom: 20px;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .status.available {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.unavailable {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>LLM Service Test</h1>
+        
+        <div id="status" class="status">Loading...</div>
+        
+        <div class="form-group">
+            <label for="provider">Provider:</label>
+            <select id="provider">
+                <option value="mock">Mock (for testing)</option>
+                <option value="openai">OpenAI</option>
+            </select>
+        </div>
+        
+        <div class="form-group" id="openai-config" style="display: none;">
+            <label for="apiKey">OpenAI API Key:</label>
+            <input type="password" id="apiKey" placeholder="sk-...">
+        </div>
+        
+        <div class="form-group">
+            <label for="inputText">Input Text:</label>
+            <textarea id="inputText" placeholder="Enter your message here...">Hello, I need help with this task. Can you please assist me?</textarea>
+        </div>
+        
+        <div class="form-group">
+            <label for="action">Action:</label>
+            <select id="action">
+                <option value="rephrase">Rephrase</option>
+                <option value="refine">Refine</option>
+                <option value="fix_grammar">Fix Grammar</option>
+                <option value="custom">Custom Prompt</option>
+            </select>
+        </div>
+        
+        <div class="form-group" id="custom-prompt-group" style="display: none;">
+            <label for="customPrompt">Custom Prompt:</label>
+            <textarea id="customPrompt" placeholder="Enter your custom prompt..."></textarea>
+        </div>
+        
+        <button id="processBtn">Process Text</button>
+        <button id="setProviderBtn">Set Provider</button>
+        
+        <div id="result" style="display: none;"></div>
+    </div>
+
+    <script type="module">
+        import { llmService } from './llm-service.js';
+        
+        // DOM elements
+        const statusEl = document.getElementById('status');
+        const providerSelect = document.getElementById('provider');
+        const apiKeyInput = document.getElementById('apiKey');
+        const openaiConfigEl = document.getElementById('openai-config');
+        const inputTextEl = document.getElementById('inputText');
+        const actionSelect = document.getElementById('action');
+        const customPromptEl = document.getElementById('customPrompt');
+        const customPromptGroupEl = document.getElementById('custom-prompt-group');
+        const processBtn = document.getElementById('processBtn');
+        const setProviderBtn = document.getElementById('setProviderBtn');
+        const resultEl = document.getElementById('result');
+        
+        // Update status display
+        async function updateStatus() {
+            try {
+                const status = await llmService.getStatus();
+                statusEl.textContent = `Provider: ${status.provider || 'None'} | Available: ${status.available ? 'Yes' : 'No'}`;
+                statusEl.className = `status ${status.available ? 'available' : 'unavailable'}`;
+                
+                if (status.error) {
+                    statusEl.textContent += ` | Error: ${status.error}`;
+                }
+            } catch (error) {
+                statusEl.textContent = `Error checking status: ${error.message}`;
+                statusEl.className = 'status unavailable';
+            }
+        }
+        
+        // Show/hide provider-specific config
+        providerSelect.addEventListener('change', () => {
+            const provider = providerSelect.value;
+            openaiConfigEl.style.display = provider === 'openai' ? 'block' : 'none';
+        });
+        
+        // Show/hide custom prompt
+        actionSelect.addEventListener('change', () => {
+            const action = actionSelect.value;
+            customPromptGroupEl.style.display = action === 'custom' ? 'block' : 'none';
+        });
+        
+        // Set provider
+        setProviderBtn.addEventListener('click', async () => {
+            const provider = providerSelect.value;
+            const config = {};
+            
+            if (provider === 'openai') {
+                const apiKey = apiKeyInput.value.trim();
+                if (!apiKey) {
+                    alert('Please enter OpenAI API key');
+                    return;
+                }
+                config.apiKey = apiKey;
+            }
+            
+            try {
+                setProviderBtn.disabled = true;
+                setProviderBtn.textContent = 'Setting...';
+                
+                await llmService.setProvider(provider, config);
+                await updateStatus();
+                
+                showResult('Provider set successfully!', false);
+            } catch (error) {
+                showResult(`Error setting provider: ${error.message}`, true);
+            } finally {
+                setProviderBtn.disabled = false;
+                setProviderBtn.textContent = 'Set Provider';
+            }
+        });
+        
+        // Process text
+        processBtn.addEventListener('click', async () => {
+            const inputText = inputTextEl.value.trim();
+            const action = actionSelect.value;
+            const customPrompt = customPromptEl.value.trim();
+            
+            if (!inputText) {
+                alert('Please enter some text to process');
+                return;
+            }
+            
+            if (action === 'custom' && !customPrompt) {
+                alert('Please enter a custom prompt');
+                return;
+            }
+            
+            try {
+                processBtn.disabled = true;
+                processBtn.textContent = 'Processing...';
+                
+                const result = await llmService.processText(inputText, action, customPrompt);
+                showResult(result, false);
+                
+            } catch (error) {
+                showResult(`Error: ${error.message}`, true);
+            } finally {
+                processBtn.disabled = false;
+                processBtn.textContent = 'Process Text';
+            }
+        });
+        
+        // Show result
+        function showResult(text, isError = false) {
+            resultEl.textContent = text;
+            resultEl.className = isError ? 'result error' : 'result';
+            resultEl.style.display = 'block';
+        }
+        
+        // Initialize
+        updateStatus();
+    </script>
+</body>
+</html> 

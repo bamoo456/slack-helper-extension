@@ -3,6 +3,8 @@
  * Handles detection of Slack input areas and adds enhancement buttons
  */
 
+import { llmService } from './llm-service.js';
+
 export class MessageHelper {
   constructor() {
     this.inputSelectors = [
@@ -24,6 +26,10 @@ export class MessageHelper {
     this.observedInputs = new Set();
     this.toolbarButtonInstances = new Map();
     this.currentDropdown = null;
+    this.currentPreview = null;
+    this.currentBackdrop = null;
+    this.previewInputElement = null;
+    this.previewProcessedText = null;
     this.initialized = false;
     
     this.handleClickOutside = this.handleClickOutside.bind(this);
@@ -370,8 +376,12 @@ export class MessageHelper {
         e.stopPropagation();
         const customPrompt = textarea.value.trim();
         if (customPrompt) {
-          this.handleCustomPrompt(customPrompt, button);
-          this.hideRefineDropdown();
+          this.handleCustomPrompt(customPrompt, button).then(() => {
+            this.hideRefineDropdown();
+          }).catch((error) => {
+            console.error('Error handling custom prompt:', error);
+            this.hideRefineDropdown();
+          });
         } else {
           textarea.focus();
         }
@@ -381,7 +391,11 @@ export class MessageHelper {
       stopPropagation(e);
     });
     
-    ['keypress', 'keyup', 'input', 'focus', 'blur', 'click'].forEach(eventType => {
+    // Handle focus and blur events
+    textarea.addEventListener('focus', stopPropagation);
+    textarea.addEventListener('blur', stopPropagation);
+    
+    ['keypress', 'keyup', 'input', 'click'].forEach(eventType => {
       textarea.addEventListener(eventType, stopPropagation);
     });
   }
@@ -412,7 +426,7 @@ export class MessageHelper {
   /**
    * Handle custom prompt action
    */
-  handleCustomPrompt(customPrompt, button) {
+  async handleCustomPrompt(customPrompt, button) {
     const inputElement = this.findInputForButton(button);
     if (!inputElement) return;
 
@@ -423,8 +437,24 @@ export class MessageHelper {
       return;
     }
 
-    // TODO: Implement actual AI processing with custom prompt
-    alert(`Custom Prompt: "${customPrompt}"\n\nOriginal: "${currentText}"\n\nThis feature will be implemented with AI integration.`);
+    try {
+      // Show loading state
+      this.showLoadingState(button, 'Processing with custom prompt...');
+      
+      // Process text with LLM service
+      const processedText = await llmService.processText(currentText, 'custom', customPrompt);
+      
+      // Hide loading state
+      this.hideLoadingState(button);
+      
+      // Show result preview
+      this.showResultPreview(inputElement, currentText, processedText, 'Custom Prompt', customPrompt);
+      
+    } catch (error) {
+      console.error('Error processing custom prompt:', error);
+      this.hideLoadingState(button);
+      alert(`Error processing your request: ${error.message}`);
+    }
   }
 
   /**
@@ -452,9 +482,12 @@ export class MessageHelper {
   handleClickOutside(event) {
     if (this.currentDropdown && !this.currentDropdown.contains(event.target)) {
       const isRefineButton = event.target.closest('.slack-helper-refine-btn-toolbar');
-      if (!isRefineButton) {
+      
+      // Only close if refine button clicked again (toggle behavior)
+      if (isRefineButton) {
         this.hideRefineDropdown();
       }
+      // All other outside clicks are ignored
     }
   }
 
@@ -472,7 +505,7 @@ export class MessageHelper {
   /**
    * Handle refine action selection
    */
-  handleRefineAction(action, button) {
+  async handleRefineAction(action, button) {
     const inputElement = this.findInputForButton(button);
     if (!inputElement) return;
 
@@ -484,13 +517,35 @@ export class MessageHelper {
     }
 
     const actionMap = {
-      'Rephrase': 'Rephrasing your message...',
-      'Refine': 'Refining your message for better quality and clarity...',
-      'Fix grammar': 'Fixing grammar and spelling...'
+      'Rephrase': { action: 'rephrase', message: 'Rephrasing your message...' },
+      'Refine': { action: 'refine', message: 'Refining your message for better quality and clarity...' },
+      'Fix grammar': { action: 'fix_grammar', message: 'Fixing grammar and spelling...' }
     };
 
-    // TODO: Implement actual AI refining logic
-    alert(`${actionMap[action] || 'Processing...'}\n\nOriginal: "${currentText}"\n\nThis feature will be implemented with AI integration.`);
+    const actionConfig = actionMap[action];
+    if (!actionConfig) {
+      alert('Unknown action selected.');
+      return;
+    }
+
+    try {
+      // Show loading state
+      this.showLoadingState(button, actionConfig.message);
+      
+      // Process text with LLM service
+      const processedText = await llmService.processText(currentText, actionConfig.action);
+      
+      // Hide loading state
+      this.hideLoadingState(button);
+      
+      // Show result preview
+      this.showResultPreview(inputElement, currentText, processedText, action);
+      
+    } catch (error) {
+      console.error('Error processing refine action:', error);
+      this.hideLoadingState(button);
+      alert(`Error processing your request: ${error.message}`);
+    }
   }
 
   /**
@@ -519,12 +574,511 @@ export class MessageHelper {
   }
 
   /**
+   * Show loading state on button
+   */
+  showLoadingState(button, message = 'Processing...') {
+    // Store original content
+    if (!button.dataset.originalContent) {
+      button.dataset.originalContent = button.innerHTML;
+    }
+    
+    // Show loading spinner
+    button.innerHTML = `
+      <svg viewBox="0 0 20 20" aria-hidden="true" style="animation: spin 1s linear infinite;">
+        <circle cx="10" cy="10" r="8" fill="none" stroke="currentColor" stroke-width="2" opacity="0.3"/>
+        <path d="M10 2 A8 8 0 0 1 18 10" fill="none" stroke="currentColor" stroke-width="2"/>
+      </svg>
+    `;
+    
+    button.disabled = true;
+    button.setAttribute('title', message);
+    
+    // Add loading styles
+    if (!document.querySelector('#slack-helper-loading-styles')) {
+      const style = document.createElement('style');
+      style.id = 'slack-helper-loading-styles';
+      style.textContent = `
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+  }
+
+  /**
+   * Hide loading state on button
+   */
+  hideLoadingState(button) {
+    if (button.dataset.originalContent) {
+      button.innerHTML = button.dataset.originalContent;
+      delete button.dataset.originalContent;
+    }
+    
+    button.disabled = false;
+    button.setAttribute('title', 'Refine Message');
+  }
+
+  /**
+   * Update input text content
+   */
+  updateInputText(inputElement, newText) {
+    if (!inputElement || !newText) return;
+
+    // Handle different types of input elements
+    if (inputElement.contentEditable === 'true') {
+      // For contenteditable elements
+      inputElement.textContent = newText;
+      
+      // Trigger input events to notify Slack
+      const inputEvent = new Event('input', { bubbles: true });
+      inputElement.dispatchEvent(inputEvent);
+      
+      // Move cursor to end
+      this.moveCursorToEnd(inputElement);
+    } else if (inputElement.tagName === 'TEXTAREA' || inputElement.tagName === 'INPUT') {
+      // For regular input/textarea elements
+      inputElement.value = newText;
+      
+      // Trigger change events
+      const changeEvent = new Event('change', { bubbles: true });
+      const inputEvent = new Event('input', { bubbles: true });
+      inputElement.dispatchEvent(inputEvent);
+      inputElement.dispatchEvent(changeEvent);
+      
+      // Move cursor to end
+      inputElement.selectionStart = inputElement.selectionEnd = newText.length;
+    }
+
+    // Focus the input element
+    inputElement.focus();
+  }
+
+  /**
+   * Move cursor to end of contenteditable element
+   */
+  moveCursorToEnd(element) {
+    try {
+      const range = document.createRange();
+      const selection = window.getSelection();
+      
+      range.selectNodeContents(element);
+      range.collapse(false);
+      
+      selection.removeAllRanges();
+      selection.addRange(range);
+    } catch (error) {
+      console.warn('Could not move cursor to end:', error);
+    }
+  }
+
+  /**
+   * Show result preview with Replace/Copy options
+   */
+  showResultPreview(inputElement, originalText, processedText, actionType, customPrompt = '') {
+    // Remove any existing preview
+    this.hideResultPreview();
+
+    // Create backdrop
+    const backdrop = document.createElement('div');
+    backdrop.className = 'slack-helper-preview-backdrop';
+    
+    // Create preview container
+    const preview = document.createElement('div');
+    preview.className = 'slack-helper-result-preview';
+    
+    // Create header
+    const header = document.createElement('div');
+    header.className = 'slack-helper-preview-header';
+    header.innerHTML = `
+      <div class="slack-helper-preview-title">
+        <span class="slack-helper-preview-icon">✨</span>
+        <span>${actionType}${customPrompt ? `: ${customPrompt}` : ''}</span>
+      </div>
+      <button class="slack-helper-preview-close" title="Close">×</button>
+    `;
+
+    // Create content sections
+    const content = document.createElement('div');
+    content.className = 'slack-helper-preview-content';
+    
+    // Original text section
+    const originalSection = document.createElement('div');
+    originalSection.className = 'slack-helper-preview-section';
+    originalSection.innerHTML = `
+      <div class="slack-helper-preview-label">Original:</div>
+      <div class="slack-helper-preview-text slack-helper-preview-original">${this.escapeHtml(originalText)}</div>
+    `;
+
+    // Processed text section
+    const processedSection = document.createElement('div');
+    processedSection.className = 'slack-helper-preview-section';
+    processedSection.innerHTML = `
+      <div class="slack-helper-preview-label">Result:</div>
+      <div class="slack-helper-preview-text slack-helper-preview-result">${this.escapeHtml(processedText)}</div>
+    `;
+
+    // Action buttons
+    const actions = document.createElement('div');
+    actions.className = 'slack-helper-preview-actions';
+    actions.innerHTML = `
+      <button class="slack-helper-preview-btn slack-helper-preview-btn-secondary" data-action="copy">
+        📋 Copy
+      </button>
+      <button class="slack-helper-preview-btn slack-helper-preview-btn-primary" data-action="replace">
+        ✅ Replace
+      </button>
+    `;
+
+    // Assemble preview
+    content.appendChild(originalSection);
+    content.appendChild(processedSection);
+    preview.appendChild(header);
+    preview.appendChild(content);
+    preview.appendChild(actions);
+
+    // Position backdrop and preview in center of screen
+    document.body.appendChild(backdrop);
+    backdrop.appendChild(preview);
+
+    // Store reference
+    this.currentPreview = preview;
+    this.currentBackdrop = backdrop;
+    this.previewInputElement = inputElement;
+    this.previewProcessedText = processedText;
+
+    // Add event listeners
+    this.addPreviewEventListeners(preview, backdrop);
+
+    // Add preview styles if not already added
+    this.loadPreviewStyles();
+  }
+
+  /**
+   * Add event listeners to preview
+   */
+  addPreviewEventListeners(preview, backdrop) {
+    // Close button
+    const closeBtn = preview.querySelector('.slack-helper-preview-close');
+    closeBtn.addEventListener('click', () => this.hideResultPreview());
+
+    // Action buttons
+    const copyBtn = preview.querySelector('[data-action="copy"]');
+    const replaceBtn = preview.querySelector('[data-action="replace"]');
+
+    copyBtn.addEventListener('click', () => this.handlePreviewAction('copy'));
+    replaceBtn.addEventListener('click', () => this.handlePreviewAction('replace'));
+
+    // Click backdrop to close
+    backdrop.addEventListener('click', (e) => {
+      if (e.target === backdrop) {
+        this.hideResultPreview();
+      }
+    });
+
+    // Keyboard events
+    setTimeout(() => {
+      document.addEventListener('keydown', this.handlePreviewKeyDown.bind(this));
+    }, 0);
+  }
+
+  /**
+   * Handle preview action (copy/replace)
+   */
+  async handlePreviewAction(action) {
+    if (action === 'copy') {
+      try {
+        await navigator.clipboard.writeText(this.previewProcessedText);
+        this.showPreviewFeedback('Copied to clipboard!');
+      } catch (error) {
+        console.error('Failed to copy:', error);
+        this.showPreviewFeedback('Failed to copy', true);
+      }
+    } else if (action === 'replace') {
+      this.updateInputText(this.previewInputElement, this.previewProcessedText);
+      this.showPreviewFeedback('Text replaced!');
+      setTimeout(() => this.hideResultPreview(), 1000);
+    }
+  }
+
+  /**
+   * Show feedback message in preview
+   */
+  showPreviewFeedback(message, isError = false) {
+    const preview = this.currentPreview;
+    if (!preview) return;
+
+    const feedback = document.createElement('div');
+    feedback.className = `slack-helper-preview-feedback ${isError ? 'error' : 'success'}`;
+    feedback.textContent = message;
+
+    preview.appendChild(feedback);
+
+    setTimeout(() => {
+      if (feedback.parentElement) {
+        feedback.remove();
+      }
+    }, 2000);
+  }
+
+
+
+  /**
+   * Handle keyboard events for preview
+   */
+  handlePreviewKeyDown(event) {
+    if (this.currentPreview && event.key === 'Escape') {
+      event.preventDefault();
+      event.stopPropagation();
+      this.hideResultPreview();
+    }
+  }
+
+  /**
+   * Hide result preview
+   */
+  hideResultPreview() {
+    if (!this.currentPreview) return;
+
+    document.removeEventListener('keydown', this.handlePreviewKeyDown);
+
+    if (this.currentBackdrop) {
+      this.currentBackdrop.remove();
+      this.currentBackdrop = null;
+    }
+    
+    this.currentPreview = null;
+    this.previewInputElement = null;
+    this.previewProcessedText = null;
+  }
+
+  /**
+   * Escape HTML for safe display
+   */
+  escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  /**
+   * Load preview styles
+   */
+  loadPreviewStyles() {
+    if (document.querySelector('#slack-helper-preview-styles')) {
+      return;
+    }
+
+    const style = document.createElement('style');
+    style.id = 'slack-helper-preview-styles';
+    style.textContent = `
+      .slack-helper-preview-backdrop {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        box-sizing: border-box;
+      }
+
+      .slack-helper-result-preview {
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 12px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+        max-width: 700px;
+        width: 100%;
+        max-height: 80vh;
+        overflow: auto;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        animation: slack-helper-preview-appear 0.2s ease-out;
+      }
+
+      @keyframes slack-helper-preview-appear {
+        from {
+          opacity: 0;
+          transform: scale(0.9);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+
+      .slack-helper-preview-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 16px;
+        border-bottom: 1px solid #eee;
+        background: #f8f9fa;
+        border-radius: 8px 8px 0 0;
+      }
+
+      .slack-helper-preview-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 600;
+        color: #333;
+        font-size: 14px;
+      }
+
+      .slack-helper-preview-icon {
+        font-size: 16px;
+      }
+
+      .slack-helper-preview-close {
+        background: none;
+        border: none;
+        font-size: 18px;
+        color: #666;
+        cursor: pointer;
+        padding: 4px;
+        border-radius: 4px;
+        line-height: 1;
+      }
+
+      .slack-helper-preview-close:hover {
+        background: #e8e8e8;
+        color: #333;
+      }
+
+      .slack-helper-preview-content {
+        padding: 16px;
+      }
+
+      .slack-helper-preview-section {
+        margin-bottom: 16px;
+      }
+
+      .slack-helper-preview-section:last-child {
+        margin-bottom: 0;
+      }
+
+      .slack-helper-preview-label {
+        font-size: 12px;
+        font-weight: 600;
+        color: #666;
+        margin-bottom: 6px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .slack-helper-preview-text {
+        padding: 12px;
+        border-radius: 6px;
+        font-size: 14px;
+        line-height: 1.4;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+      }
+
+      .slack-helper-preview-original {
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        color: #666;
+      }
+
+      .slack-helper-preview-result {
+        background: #e8f5e8;
+        border: 1px solid #c3e6cb;
+        color: #155724;
+      }
+
+      .slack-helper-preview-actions {
+        display: flex;
+        gap: 8px;
+        padding: 12px 16px;
+        border-top: 1px solid #eee;
+        background: #f8f9fa;
+        border-radius: 0 0 8px 8px;
+        justify-content: flex-end;
+      }
+
+      .slack-helper-preview-btn {
+        padding: 8px 16px;
+        border: none;
+        border-radius: 4px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+
+      .slack-helper-preview-btn-secondary {
+        background: #f8f9fa;
+        color: #495057;
+        border: 1px solid #dee2e6;
+      }
+
+      .slack-helper-preview-btn-secondary:hover {
+        background: #e9ecef;
+        border-color: #adb5bd;
+      }
+
+      .slack-helper-preview-btn-primary {
+        background: #007a5a;
+        color: white;
+      }
+
+      .slack-helper-preview-btn-primary:hover {
+        background: #005a3a;
+      }
+
+      .slack-helper-preview-feedback {
+        position: absolute;
+        bottom: 16px;
+        right: 16px;
+        padding: 8px 12px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 500;
+        z-index: 1001;
+      }
+
+      .slack-helper-preview-feedback.success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+
+      .slack-helper-preview-feedback.error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+      }
+
+      .slack-helper-relative {
+        position: relative !important;
+      }
+    `;
+
+    document.head.appendChild(style);
+  }
+
+
+
+  /**
    * Cleanup method
    */
   destroy() {
     if (this.observer) {
       this.observer.disconnect();
     }
+    
+    // Clean up preview
+    this.hideResultPreview();
+    
+    // Clean up dropdown
+    this.hideRefineDropdown();
     
     this.toolbarButtonInstances.forEach(button => {
       if (button.parentElement) {
