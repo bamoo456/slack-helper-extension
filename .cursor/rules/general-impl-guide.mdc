@@ -10,5 +10,5 @@ Implementation:
 
 
 Documents:
-* No need to add implementation, debug and test guide document after implementation.
+* No need to add implementation, debug and test guide document after implementation is done in the chat.
 * Any test related files should not be persisted.
