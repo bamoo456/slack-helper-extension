@@ -1117,6 +1117,217 @@ h4 {
 }
 
 .modal-container.error .sync-spinner::before {
-  content: '❌';
-  font-size: 32px;
+  content: "❌";
+  color: #dc3545;
+}
+
+/* LLM API 設定樣式 */
+.llm-settings-section {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+  border: 1px solid #e9ecef;
+}
+
+.llm-provider-dropdown {
+  width: 100%;
+  padding: 8px 12px;
+  border: 2px solid #e9ecef;
+  border-radius: 6px;
+  font-size: 13px;
+  background: white;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.llm-provider-dropdown:hover {
+  border-color: #4A154B;
+}
+
+.llm-provider-dropdown:focus {
+  outline: none;
+  border-color: #4A154B;
+  box-shadow: 0 0 0 2px rgba(74, 21, 75, 0.1);
+}
+
+.llm-provider-config {
+  margin-top: 16px;
+  padding: 16px;
+  background: white;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.llm-provider-config h4 {
+  margin-top: 0;
+  color: #4A154B;
+  border-bottom: 1px solid #e9ecef;
+  padding-bottom: 8px;
+}
+
+.llm-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 2px solid #e9ecef;
+  border-radius: 6px;
+  font-size: 13px;
+  background: white;
+  color: #333;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.llm-input:hover {
+  border-color: #4A154B;
+}
+
+.llm-input:focus {
+  outline: none;
+  border-color: #4A154B;
+  box-shadow: 0 0 0 2px rgba(74, 21, 75, 0.1);
+}
+
+.llm-input[type="password"] {
+  font-family: monospace;
+  letter-spacing: 2px;
+}
+
+.llm-model-dropdown {
+  width: 100%;
+  padding: 8px 12px;
+  border: 2px solid #e9ecef;
+  border-radius: 6px;
+  font-size: 13px;
+  background: white;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.llm-model-dropdown:hover {
+  border-color: #4A154B;
+}
+
+.llm-model-dropdown:focus {
+  outline: none;
+  border-color: #4A154B;
+  box-shadow: 0 0 0 2px rgba(74, 21, 75, 0.1);
+}
+
+.llm-textarea {
+  width: 100%;
+  padding: 8px 12px;
+  border: 2px solid #e9ecef;
+  border-radius: 6px;
+  font-size: 13px;
+  background: white;
+  color: #333;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  resize: vertical;
+  min-height: 60px;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.llm-textarea:hover {
+  border-color: #4A154B;
+}
+
+.llm-textarea:focus {
+  outline: none;
+  border-color: #4A154B;
+  box-shadow: 0 0 0 2px rgba(74, 21, 75, 0.1);
+}
+
+.llm-textarea::placeholder {
+  color: #999;
+  font-style: italic;
+}
+
+.llm-test-status {
+  margin-top: 8px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  display: none;
+}
+
+.llm-test-status.show {
+  display: block;
+}
+
+.llm-test-status.success {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.llm-test-status.error {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.llm-test-status.loading {
+  background: #e2e3e5;
+  color: #383d41;
+  border: 1px solid #d6d8db;
+}
+
+.llm-settings-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #e9ecef;
+}
+
+.llm-status {
+  margin-top: 12px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  text-align: center;
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: all 0.3s ease;
+}
+
+.llm-status.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.llm-status.success {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.llm-status.error {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.llm-status.info {
+  background: #d1ecf1;
+  color: #0c5460;
+  border: 1px solid #bee5eb;
+}
+
+/* 響應式設計 */
+@media (max-width: 480px) {
+  .llm-settings-actions {
+    flex-direction: column;
+  }
+  
+  .llm-settings-actions button {
+    width: 100%;
+  }
 } 

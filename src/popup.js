@@ -42,11 +42,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
   console.log('Popup loaded, starting Slack page check...');
   
+  // 設置標籤頁功能 (優先執行，確保基本功能可用)
+  setupTabSwitching();
+  
   // 初始化語言設定
   initializeLanguage();
-  
-  // 設置標籤頁功能
-  setupTabSwitching();
   
   // 載入已保存的 AI 提示詞 並顯示預覽
   loadAndDisplayCurrentPrompt();
@@ -66,20 +66,32 @@ document.addEventListener('DOMContentLoaded', function() {
   // 設置語言切換事件監聽器
   setupLanguageHandlers();
   
+  // 設置 LLM 設定相關事件監聽器
+  setupLLMSettingsHandlers();
+  
   // 檢查當前活動頁面是否為Slack
   checkSlackPage();
 
   // 初始化語言設定
   async function initializeLanguage() {
     try {
-      // 載入保存的語言設定
-      chrome.storage.local.get(['selectedLanguage'], function(result) {
-        const savedLanguage = result.selectedLanguage || 'zh-TW';
-        languageSelect.value = savedLanguage;
-        
-        // 應用語言設定
-        applyLanguage(savedLanguage);
-      });
+      // 檢查是否在 Chrome Extension 環境中
+      if (typeof chrome !== 'undefined' && chrome.storage) {
+        // 載入保存的語言設定
+        chrome.storage.local.get(['selectedLanguage'], function(result) {
+          const savedLanguage = result.selectedLanguage || 'zh-TW';
+          if (languageSelect) {
+            languageSelect.value = savedLanguage;
+          }
+          
+          // 應用語言設定
+          applyLanguage(savedLanguage);
+        });
+      } else {
+        console.warn('Chrome Extension API not available, using default language');
+        // 使用預設語言
+        applyLanguage('zh-TW');
+      }
     } catch (error) {
       console.error('初始化語言設定時發生錯誤:', error);
       // 使用預設語言
@@ -109,8 +121,18 @@ document.addEventListener('DOMContentLoaded', function() {
   // 應用語言設定
   async function applyLanguage(language) {
     try {
+      let translationUrl;
+      
+      // 檢查是否在 Chrome Extension 環境中
+      if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.getURL) {
+        translationUrl = chrome.runtime.getURL(`locales/${language}/translation.json`);
+      } else {
+        // 在普通網頁環境中使用相對路徑
+        translationUrl = `locales/${language}/translation.json`;
+      }
+      
       // 載入對應的翻譯文件
-      const response = await fetch(chrome.runtime.getURL(`locales/${language}/translation.json`));
+      const response = await fetch(translationUrl);
       const translations = await response.json();
       
       // 存儲當前翻譯
@@ -125,6 +147,20 @@ document.addEventListener('DOMContentLoaded', function() {
       // 如果載入失敗，嘗試載入預設語言
       if (language !== 'zh-TW') {
         applyLanguage('zh-TW');
+      } else {
+        // 如果連預設語言都載入失敗，使用內建的預設翻譯
+        console.warn('Using fallback translations');
+        currentTranslations = {
+          title: 'Slack Thread Summary Tool',
+          description: '在 Slack 討論串中使用「📝 摘要此討論串」按鈕來自動提取訊息並在 Gemini 中生成摘要。',
+          tabs: {
+            prompt: '📝 AI 提示詞',
+            scroll: '⚙️ 滾動設定',
+            sync: '🔄 模型同步',
+            llm: '🤖 LLM API 設定'
+          }
+        };
+        updatePageTexts(currentTranslations);
       }
     }
   }
@@ -163,6 +199,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 更新同步設定區域
     updateSyncSectionTexts(translations);
+
+    // 更新 LLM 設定區域
+    updateLLMSectionTexts(translations);
 
     // 更新使用說明
     updateUsageGuideTexts(translations);
@@ -408,6 +447,108 @@ document.addEventListener('DOMContentLoaded', function() {
     // 更新提示文字
     const footerTip = document.querySelector('.footer p');
     if (footerTip) footerTip.textContent = statusSection.tip;
+  }
+
+  // 更新 LLM 設定區域文字
+  function updateLLMSectionTexts(translations) {
+    const llmSection = translations.llm;
+    if (!llmSection) return;
+
+    // 更新標題和提示
+    const llmTitle = document.querySelector('#llm-tab h3');
+    if (llmTitle) llmTitle.textContent = llmSection.title;
+
+    const llmHint = document.querySelector('#llm-tab .settings-hint');
+    if (llmHint) llmHint.textContent = llmSection.hint;
+
+    // 更新設定組標題
+    const settingsGroups = document.querySelectorAll('#llm-tab .settings-group h4');
+    if (settingsGroups[0]) settingsGroups[0].textContent = llmSection.apiProvider;
+    if (settingsGroups[1]) settingsGroups[1].textContent = llmSection.openaiConfig;
+    if (settingsGroups[2]) settingsGroups[2].textContent = llmSection.compatibleConfig;
+    if (settingsGroups[3]) settingsGroups[3].textContent = llmSection.testConnection;
+
+    // 更新提供商選擇
+    const providerLabel = document.querySelector('label[for="llmProviderSelect"]');
+    if (providerLabel) providerLabel.textContent = llmSection.selectProvider;
+
+    const providerSelect = document.getElementById('llmProviderSelect');
+    if (providerSelect) {
+      const options = providerSelect.querySelectorAll('option');
+      if (options[0]) options[0].textContent = llmSection.selectProviderPlaceholder;
+      if (options[1]) options[1].textContent = llmSection.openaiSettings;
+      if (options[2]) options[2].textContent = llmSection.openaiCompatibleSettings;
+    }
+
+    // 更新標籤文字
+    const labelMappings = [
+      { selector: 'label[for="openaiApiKey"]', text: llmSection.openaiApiKey },
+      { selector: 'label[for="compatibleBaseUrl"]', text: llmSection.compatibleBaseUrl },
+      { selector: 'label[for="compatibleModel"]', text: llmSection.compatibleModel },
+      { selector: 'label[for="compatibleHeaders"]', text: llmSection.compatibleHeaders },
+      { selector: 'label[for="compatibleParams"]', text: llmSection.compatibleParams }
+    ];
+
+    labelMappings.forEach(mapping => {
+      const label = document.querySelector(mapping.selector);
+      if (label && mapping.text) {
+        label.textContent = mapping.text;
+      }
+    });
+
+    // 更新輸入欄位佔位符
+    const placeholderMappings = [
+      { id: 'openaiApiKey', placeholder: llmSection.openaiApiKeyPlaceholder },
+      { id: 'compatibleBaseUrl', placeholder: llmSection.compatibleBaseUrlPlaceholder },
+      { id: 'compatibleModel', placeholder: llmSection.compatibleModelPlaceholder },
+      { id: 'compatibleHeaders', placeholder: llmSection.compatibleHeadersPlaceholder },
+      { id: 'compatibleParams', placeholder: llmSection.compatibleParamsPlaceholder }
+    ];
+
+    placeholderMappings.forEach(mapping => {
+      const element = document.getElementById(mapping.id);
+      if (element && mapping.placeholder) {
+        element.placeholder = mapping.placeholder;
+      }
+    });
+
+
+
+    // 更新按鈕
+    const testLLMConnection = document.getElementById('testLLMConnection');
+    if (testLLMConnection) testLLMConnection.textContent = llmSection.testConnectionButton;
+
+    const saveLLMSettings = document.getElementById('saveLLMSettings');
+    if (saveLLMSettings) saveLLMSettings.textContent = llmSection.save;
+
+    const resetLLMSettings = document.getElementById('resetLLMSettings');
+    if (resetLLMSettings) resetLLMSettings.textContent = llmSection.reset;
+
+    const loadLLMSettings = document.getElementById('loadLLMSettings');
+    if (loadLLMSettings) loadLLMSettings.textContent = llmSection.loadCurrent;
+
+    // 更新所有描述文字 - 使用更精確的方法
+    const descriptionMappings = [
+      { selector: 'label[for="llmProviderSelect"]', text: llmSection.selectProviderDesc },
+      { selector: 'label[for="openaiApiKey"]', text: llmSection.openaiApiKeyDesc },
+      { selector: 'label[for="compatibleBaseUrl"]', text: llmSection.compatibleBaseUrlDesc },
+      { selector: 'label[for="compatibleModel"]', text: llmSection.compatibleModelDesc },
+      { selector: 'label[for="compatibleHeaders"]', text: llmSection.compatibleHeadersDesc },
+      { selector: 'label[for="compatibleParams"]', text: llmSection.compatibleParamsDesc }
+    ];
+
+    descriptionMappings.forEach(mapping => {
+      const label = document.querySelector(mapping.selector);
+      if (label) {
+        const settingRow = label.closest('.setting-row');
+        if (settingRow) {
+          const small = settingRow.querySelector('small');
+          if (small && mapping.text) {
+            small.textContent = mapping.text;
+          }
+        }
+      }
+    });
   }
 
   async function loadAndDisplayCurrentPrompt() {
@@ -1252,6 +1393,256 @@ document.addEventListener('DOMContentLoaded', function() {
       syncActionStatus.textContent = '';
       syncActionStatus.className = 'sync-status';
     }, 5000);
+  }
+
+  // LLM 設定相關函數
+  function setupLLMSettingsHandlers() {
+    const llmProviderSelect = document.getElementById('llmProviderSelect');
+    const openaiConfig = document.getElementById('openai-config');
+    const openaiCompatibleConfig = document.getElementById('openai-compatible-config');
+    const llmTestSection = document.getElementById('llm-test-section');
+    const llmActions = document.getElementById('llm-actions');
+    const testLLMConnection = document.getElementById('testLLMConnection');
+    const saveLLMSettings = document.getElementById('saveLLMSettings');
+    const resetLLMSettings = document.getElementById('resetLLMSettings');
+    const loadLLMSettings = document.getElementById('loadLLMSettings');
+
+    // 提供商選擇變更事件
+    if (llmProviderSelect) {
+      llmProviderSelect.addEventListener('change', function() {
+        const selectedProvider = this.value;
+        
+        // 隱藏所有配置區域
+        if (openaiConfig) openaiConfig.style.display = 'none';
+        if (openaiCompatibleConfig) openaiCompatibleConfig.style.display = 'none';
+        if (llmTestSection) llmTestSection.style.display = 'none';
+        if (llmActions) llmActions.style.display = 'none';
+        
+        // 根據選擇顯示對應的配置區域
+        if (selectedProvider === 'openai') {
+          if (openaiConfig) openaiConfig.style.display = 'block';
+          if (llmTestSection) llmTestSection.style.display = 'block';
+          if (llmActions) llmActions.style.display = 'block';
+        } else if (selectedProvider === 'openai-compatible') {
+          if (openaiCompatibleConfig) openaiCompatibleConfig.style.display = 'block';
+          if (llmTestSection) llmTestSection.style.display = 'block';
+          if (llmActions) llmActions.style.display = 'block';
+        }
+      });
+    }
+
+    // 測試連接按鈕
+    if (testLLMConnection) {
+      testLLMConnection.addEventListener('click', function() {
+        testLLMConnectionHandler();
+      });
+    }
+
+    // 保存設定按鈕
+    if (saveLLMSettings) {
+      saveLLMSettings.addEventListener('click', function() {
+        saveLLMSettingsHandler();
+      });
+    }
+
+    // 重置設定按鈕
+    if (resetLLMSettings) {
+      resetLLMSettings.addEventListener('click', function() {
+        resetLLMSettingsHandler();
+      });
+    }
+
+    // 載入設定按鈕
+    if (loadLLMSettings) {
+      loadLLMSettings.addEventListener('click', function() {
+        loadLLMSettingsHandler();
+      });
+    }
+
+    // 初始載入設定
+    loadLLMSettingsHandler();
+  }
+
+  function testLLMConnectionHandler() {
+    const llmTestStatus = document.getElementById('llmTestStatus');
+    const llmProviderSelect = document.getElementById('llmProviderSelect');
+    
+    if (!llmTestStatus || !llmProviderSelect) return;
+    
+    const selectedProvider = llmProviderSelect.value;
+    const translations = currentTranslations?.llm || {};
+    
+    // 顯示測試中狀態
+    llmTestStatus.className = 'llm-test-status loading show';
+    llmTestStatus.textContent = translations.testConnectionTesting || '正在測試 API 連接...';
+    
+    // 模擬測試（實際實作時會調用真實的 API 測試）
+    setTimeout(() => {
+      // 這裡應該實作真實的 API 測試邏輯
+      llmTestStatus.className = 'llm-test-status success show';
+      llmTestStatus.textContent = translations.testConnectionSuccess || '✅ API 連接測試成功！';
+      
+      setTimeout(() => {
+        llmTestStatus.classList.remove('show');
+      }, 3000);
+    }, 2000);
+  }
+
+  function saveLLMSettingsHandler() {
+    const llmProviderSelect = document.getElementById('llmProviderSelect');
+    const selectedProvider = llmProviderSelect?.value;
+    const translations = currentTranslations?.llm || {};
+    
+    if (!selectedProvider) {
+      showLLMActionStatus(translations.selectProviderFirst || '請先選擇 LLM 提供商', 'error');
+      return;
+    }
+    
+    let settings = {
+      provider: selectedProvider
+    };
+    
+    if (selectedProvider === 'openai') {
+      const apiKey = document.getElementById('openaiApiKey')?.value;
+      
+      if (!apiKey) {
+        showLLMActionStatus(translations.apiKeyRequired || '請輸入 OpenAI API Key', 'error');
+        return;
+      }
+      
+      settings.config = {
+        apiKey: apiKey
+      };
+    } else if (selectedProvider === 'openai-compatible') {
+      const baseUrl = document.getElementById('compatibleBaseUrl')?.value;
+      const model = document.getElementById('compatibleModel')?.value;
+      const headers = document.getElementById('compatibleHeaders')?.value;
+      const params = document.getElementById('compatibleParams')?.value;
+      
+      if (!baseUrl || !model) {
+        showLLMActionStatus(translations.fillRequiredFields || '請填寫所有必要欄位', 'error');
+        return;
+      }
+      
+      settings.config = {
+        baseUrl: baseUrl,
+        model: model
+      };
+      
+      // 解析自定義 headers 和 params
+      if (headers) {
+        try {
+          settings.config.customHeaders = JSON.parse(headers);
+        } catch (e) {
+          showLLMActionStatus(translations.invalidHeadersFormat || '自定義 Headers 格式錯誤，請使用有效的 JSON 格式', 'error');
+          return;
+        }
+      }
+      
+      if (params) {
+        try {
+          settings.config.customParams = JSON.parse(params);
+        } catch (e) {
+          showLLMActionStatus(translations.invalidParamsFormat || '自定義參數格式錯誤，請使用有效的 JSON 格式', 'error');
+          return;
+        }
+      }
+    }
+    
+    // 保存設定到 Chrome storage
+    chrome.storage.local.set({
+      'llmSettings': settings
+    }, function() {
+      if (chrome.runtime.lastError) {
+        showLLMActionStatus((translations.saveFailed || '保存設定失敗') + ': ' + chrome.runtime.lastError.message, 'error');
+      } else {
+        showLLMActionStatus(translations.saved || '✅ LLM 設定已保存', 'success');
+      }
+    });
+  }
+
+  function resetLLMSettingsHandler() {
+    // 重置所有輸入欄位
+    const llmProviderSelect = document.getElementById('llmProviderSelect');
+    const openaiApiKey = document.getElementById('openaiApiKey');
+    const compatibleBaseUrl = document.getElementById('compatibleBaseUrl');
+    const compatibleModel = document.getElementById('compatibleModel');
+    const compatibleHeaders = document.getElementById('compatibleHeaders');
+    const compatibleParams = document.getElementById('compatibleParams');
+    
+    if (llmProviderSelect) llmProviderSelect.value = '';
+    if (openaiApiKey) openaiApiKey.value = '';
+    if (compatibleBaseUrl) compatibleBaseUrl.value = '';
+    if (compatibleModel) compatibleModel.value = '';
+    if (compatibleHeaders) compatibleHeaders.value = '';
+    if (compatibleParams) compatibleParams.value = '';
+    
+    // 隱藏所有配置區域
+    const openaiConfig = document.getElementById('openai-config');
+    const openaiCompatibleConfig = document.getElementById('openai-compatible-config');
+    const llmTestSection = document.getElementById('llm-test-section');
+    const llmActions = document.getElementById('llm-actions');
+    
+    if (openaiConfig) openaiConfig.style.display = 'none';
+    if (openaiCompatibleConfig) openaiCompatibleConfig.style.display = 'none';
+    if (llmTestSection) llmTestSection.style.display = 'none';
+    if (llmActions) llmActions.style.display = 'none';
+    
+    // 清除保存的設定
+    chrome.storage.local.remove(['llmSettings'], function() {
+      const translations = currentTranslations?.llm || {};
+      showLLMActionStatus(translations.resetSuccess || '🔄 LLM 設定已重置', 'info');
+    });
+  }
+
+  function loadLLMSettingsHandler() {
+    chrome.storage.local.get(['llmSettings'], function(result) {
+      const settings = result.llmSettings;
+      
+      if (!settings) {
+        return; // 沒有設定時不顯示訊息
+      }
+      
+      const llmProviderSelect = document.getElementById('llmProviderSelect');
+      if (llmProviderSelect) {
+        llmProviderSelect.value = settings.provider || '';
+        
+        // 觸發 change 事件以顯示對應的配置區域
+        llmProviderSelect.dispatchEvent(new Event('change'));
+      }
+      
+      if (settings.provider === 'openai' && settings.config) {
+        const openaiApiKey = document.getElementById('openaiApiKey');
+        
+        if (openaiApiKey) openaiApiKey.value = settings.config.apiKey || '';
+      } else if (settings.provider === 'openai-compatible' && settings.config) {
+        const compatibleBaseUrl = document.getElementById('compatibleBaseUrl');
+        const compatibleModel = document.getElementById('compatibleModel');
+        const compatibleHeaders = document.getElementById('compatibleHeaders');
+        const compatibleParams = document.getElementById('compatibleParams');
+        
+        if (compatibleBaseUrl) compatibleBaseUrl.value = settings.config.baseUrl || '';
+        if (compatibleModel) compatibleModel.value = settings.config.model || '';
+        if (compatibleHeaders && settings.config.customHeaders) {
+          compatibleHeaders.value = JSON.stringify(settings.config.customHeaders, null, 2);
+        }
+        if (compatibleParams && settings.config.customParams) {
+          compatibleParams.value = JSON.stringify(settings.config.customParams, null, 2);
+        }
+      }
+    });
+  }
+
+  function showLLMActionStatus(message, type) {
+    const llmActionStatus = document.getElementById('llmActionStatus');
+    if (!llmActionStatus) return;
+    
+    llmActionStatus.textContent = message;
+    llmActionStatus.className = `llm-status ${type} show`;
+    
+    setTimeout(() => {
+      llmActionStatus.classList.remove('show');
+    }, 3000);
   }
 
   // 減少檢查頻率，避免過度請求

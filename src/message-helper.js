@@ -31,11 +31,13 @@ export class MessageHelper {
     this.previewInputElement = null;
     this.previewProcessedText = null;
     this.initialized = false;
+    this.translations = null;
     
     this.handleClickOutside = this.handleClickOutside.bind(this);
     this.handleKeyDown = this.handleKeyDown.bind(this);
     
     this.loadStyles();
+    this.loadTranslations();
   }
 
   /**
@@ -56,6 +58,61 @@ export class MessageHelper {
   }
 
   /**
+   * Load translations for the message helper
+   */
+  async loadTranslations() {
+    try {
+      // Get saved language preference
+      const result = await new Promise((resolve) => {
+        chrome.storage.local.get(['selectedLanguage'], resolve);
+      });
+      
+      const language = result.selectedLanguage || 'zh-TW';
+      const translationUrl = chrome.runtime.getURL(`locales/${language}/translation.json`);
+      
+      const response = await fetch(translationUrl);
+      const translations = await response.json();
+      
+      this.translations = translations.messageHelper || {};
+      console.log('Message helper translations loaded:', language);
+    } catch (error) {
+      console.error('Failed to load message helper translations:', error);
+      // Fallback to default translations
+      this.translations = {
+        refineMessage: 'Refine Message',
+        customPromptPlaceholder: 'Modify with a prompt... (Ctrl+Enter to apply)',
+        rephrase: 'Rephrase',
+        refine: 'Refine',
+        fixGrammar: 'Fix grammar',
+        pleaseTypeMessage: 'Please type a message first before applying custom prompt.',
+        pleaseTypeMessageBeforeRefining: 'Please type a message first before refining it.',
+        errorProcessingRequest: 'Error processing your request',
+        rephrasing: 'Rephrasing your message...',
+        refining: 'Refining your message for better quality and clarity...',
+        fixingGrammar: 'Fixing grammar and spelling...',
+        processingCustomPrompt: 'Processing with custom prompt...',
+        processing: 'Processing...',
+        customPrompt: 'Custom Prompt',
+        original: 'Original:',
+        result: 'Result:',
+        copy: '📋 Copy',
+        replace: '✅ Replace',
+        copiedToClipboard: 'Copied to clipboard!',
+        failedToCopy: 'Failed to copy',
+        textReplaced: 'Text replaced!',
+        unknownAction: 'Unknown action selected.'
+      };
+    }
+  }
+
+  /**
+   * Get translation text with fallback
+   */
+  t(key, fallback = '') {
+    return this.translations?.[key] || fallback || key;
+  }
+
+  /**
    * Initialize the input enhancer
    */
   async init() {
@@ -63,7 +120,103 @@ export class MessageHelper {
     
     this.startObserving();
     this.processExistingInputs();
+    this.setupLanguageChangeListener();
     this.initialized = true;
+  }
+
+  /**
+   * Setup language change listener
+   */
+  setupLanguageChangeListener() {
+    // Listen for language changes in Chrome storage
+    chrome.storage.onChanged.addListener((changes, namespace) => {
+      if (namespace === 'local' && changes.selectedLanguage) {
+        console.log('Language changed, reloading translations...');
+        this.loadTranslations().then(() => {
+          this.updateExistingUIElements();
+        });
+      }
+    });
+  }
+
+  /**
+   * Update existing UI elements with new translations
+   */
+  updateExistingUIElements() {
+    // Update all existing toolbar buttons
+    this.toolbarButtonInstances.forEach((button, toolbar) => {
+      if (button && button.parentElement) {
+        button.setAttribute('aria-label', this.t('refineMessage', 'Refine Message'));
+        button.setAttribute('title', this.t('refineMessage', 'Refine Message'));
+      }
+    });
+
+    // Update current dropdown if it exists
+    if (this.currentDropdown) {
+      this.updateDropdownTexts();
+    }
+
+    // Update current preview if it exists
+    if (this.currentPreview) {
+      this.updatePreviewTexts();
+    }
+  }
+
+  /**
+   * Update dropdown texts with new translations
+   */
+  updateDropdownTexts() {
+    if (!this.currentDropdown) return;
+
+    // Update custom prompt placeholder
+    const textarea = this.currentDropdown.querySelector('.slack-helper-custom-prompt-input');
+    if (textarea) {
+      textarea.placeholder = this.t('customPromptPlaceholder', 'Modify with a prompt... (Ctrl+Enter to apply)');
+    }
+
+    // Update menu items
+    const menuItems = this.currentDropdown.querySelectorAll('.slack-helper-dropdown-item');
+    const menuTexts = [
+      this.t('rephrase', 'Rephrase'),
+      this.t('refine', 'Refine'),
+      this.t('fixGrammar', 'Fix grammar')
+    ];
+
+    menuItems.forEach((item, index) => {
+      const titleElement = item.querySelector('.slack-helper-dropdown-title');
+      if (titleElement && menuTexts[index]) {
+        titleElement.textContent = menuTexts[index];
+      }
+    });
+  }
+
+  /**
+   * Update preview texts with new translations
+   */
+  updatePreviewTexts() {
+    if (!this.currentPreview) return;
+
+    // Update section labels
+    const originalLabel = this.currentPreview.querySelector('.slack-helper-preview-section:first-of-type .slack-helper-preview-label');
+    if (originalLabel) {
+      originalLabel.textContent = this.t('original', 'Original:');
+    }
+
+    const resultLabel = this.currentPreview.querySelector('.slack-helper-preview-section:last-of-type .slack-helper-preview-label');
+    if (resultLabel) {
+      resultLabel.textContent = this.t('result', 'Result:');
+    }
+
+    // Update action buttons
+    const copyBtn = this.currentPreview.querySelector('[data-action="copy"]');
+    if (copyBtn) {
+      copyBtn.textContent = this.t('copy', '📋 Copy');
+    }
+
+    const replaceBtn = this.currentPreview.querySelector('[data-action="replace"]');
+    if (replaceBtn) {
+      replaceBtn.textContent = this.t('replace', '✅ Replace');
+    }
   }
 
   /**
@@ -244,8 +397,8 @@ export class MessageHelper {
     const button = document.createElement('button');
     button.className = 'c-button-unstyled c-icon_button c-icon_button--size_small slack-helper-refine-btn-toolbar';
     button.type = 'button';
-    button.setAttribute('aria-label', 'Refine Message');
-    button.setAttribute('title', 'Refine Message');
+    button.setAttribute('aria-label', this.t('refineMessage', 'Refine Message'));
+    button.setAttribute('title', this.t('refineMessage', 'Refine Message'));
     
     // Create SVG icon
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -308,9 +461,9 @@ export class MessageHelper {
 
     // Create menu items
     const menuItems = [
-      { icon: '✏️', text: 'Rephrase' },
-      { icon: '✨', text: 'Refine' },
-      { icon: '🔧', text: 'Fix grammar' }
+      { icon: '✏️', text: this.t('rephrase', 'Rephrase') },
+      { icon: '✨', text: this.t('refine', 'Refine') },
+      { icon: '🔧', text: this.t('fixGrammar', 'Fix grammar') }
     ];
 
     menuItems.forEach(item => {
@@ -343,7 +496,7 @@ export class MessageHelper {
     
     const textarea = document.createElement('textarea');
     textarea.className = 'slack-helper-custom-prompt-input';
-    textarea.placeholder = 'Modify with a prompt... (Ctrl+Enter to apply)';
+    textarea.placeholder = this.t('customPromptPlaceholder', 'Modify with a prompt... (Ctrl+Enter to apply)');
     textarea.rows = 3;
     
     // Add event handlers
@@ -433,13 +586,13 @@ export class MessageHelper {
     const currentText = inputElement.textContent || inputElement.value || '';
     
     if (!currentText.trim()) {
-      alert('Please type a message first before applying custom prompt.');
+      alert(this.t('pleaseTypeMessage', 'Please type a message first before applying custom prompt.'));
       return;
     }
 
     try {
       // Show loading state
-      this.showLoadingState(button, 'Processing with custom prompt...');
+      this.showLoadingState(button, this.t('processingCustomPrompt', 'Processing with custom prompt...'));
       
       // Process text with LLM service
       const processedText = await llmService.processText(currentText, 'custom', customPrompt);
@@ -448,12 +601,12 @@ export class MessageHelper {
       this.hideLoadingState(button);
       
       // Show result preview
-      this.showResultPreview(inputElement, currentText, processedText, 'Custom Prompt', customPrompt);
+      this.showResultPreview(inputElement, currentText, processedText, this.t('customPrompt', 'Custom Prompt'), customPrompt);
       
     } catch (error) {
       console.error('Error processing custom prompt:', error);
       this.hideLoadingState(button);
-      alert(`Error processing your request: ${error.message}`);
+      alert(`${this.t('errorProcessingRequest', 'Error processing your request')}: ${error.message}`);
     }
   }
 
@@ -512,19 +665,19 @@ export class MessageHelper {
     const currentText = inputElement.textContent || inputElement.value || '';
     
     if (!currentText.trim()) {
-      alert('Please type a message first before refining it.');
+      alert(this.t('pleaseTypeMessageBeforeRefining', 'Please type a message first before refining it.'));
       return;
     }
 
     const actionMap = {
-      'Rephrase': { action: 'rephrase', message: 'Rephrasing your message...' },
-      'Refine': { action: 'refine', message: 'Refining your message for better quality and clarity...' },
-      'Fix grammar': { action: 'fix_grammar', message: 'Fixing grammar and spelling...' }
+      [this.t('rephrase', 'Rephrase')]: { action: 'rephrase', message: this.t('rephrasing', 'Rephrasing your message...') },
+      [this.t('refine', 'Refine')]: { action: 'refine', message: this.t('refining', 'Refining your message for better quality and clarity...') },
+      [this.t('fixGrammar', 'Fix grammar')]: { action: 'fix_grammar', message: this.t('fixingGrammar', 'Fixing grammar and spelling...') }
     };
 
     const actionConfig = actionMap[action];
     if (!actionConfig) {
-      alert('Unknown action selected.');
+      alert(this.t('unknownAction', 'Unknown action selected.'));
       return;
     }
 
@@ -544,7 +697,7 @@ export class MessageHelper {
     } catch (error) {
       console.error('Error processing refine action:', error);
       this.hideLoadingState(button);
-      alert(`Error processing your request: ${error.message}`);
+      alert(`${this.t('errorProcessingRequest', 'Error processing your request')}: ${error.message}`);
     }
   }
 
@@ -576,7 +729,10 @@ export class MessageHelper {
   /**
    * Show loading state on button
    */
-  showLoadingState(button, message = 'Processing...') {
+  showLoadingState(button, message = null) {
+    if (!message) {
+      message = this.t('processing', 'Processing...');
+    }
     // Store original content
     if (!button.dataset.originalContent) {
       button.dataset.originalContent = button.innerHTML;
@@ -617,7 +773,7 @@ export class MessageHelper {
     }
     
     button.disabled = false;
-    button.setAttribute('title', 'Refine Message');
+    button.setAttribute('title', this.t('refineMessage', 'Refine Message'));
   }
 
   /**
@@ -707,7 +863,7 @@ export class MessageHelper {
     const originalSection = document.createElement('div');
     originalSection.className = 'slack-helper-preview-section';
     originalSection.innerHTML = `
-      <div class="slack-helper-preview-label">Original:</div>
+      <div class="slack-helper-preview-label">${this.t('original', 'Original:')}</div>
       <div class="slack-helper-preview-text slack-helper-preview-original">${this.escapeHtml(originalText)}</div>
     `;
 
@@ -715,7 +871,7 @@ export class MessageHelper {
     const processedSection = document.createElement('div');
     processedSection.className = 'slack-helper-preview-section';
     processedSection.innerHTML = `
-      <div class="slack-helper-preview-label">Result:</div>
+      <div class="slack-helper-preview-label">${this.t('result', 'Result:')}</div>
       <div class="slack-helper-preview-text slack-helper-preview-result">${this.escapeHtml(processedText)}</div>
     `;
 
@@ -724,10 +880,10 @@ export class MessageHelper {
     actions.className = 'slack-helper-preview-actions';
     actions.innerHTML = `
       <button class="slack-helper-preview-btn slack-helper-preview-btn-secondary" data-action="copy">
-        📋 Copy
+        ${this.t('copy', '📋 Copy')}
       </button>
       <button class="slack-helper-preview-btn slack-helper-preview-btn-primary" data-action="replace">
-        ✅ Replace
+        ${this.t('replace', '✅ Replace')}
       </button>
     `;
 
@@ -790,14 +946,14 @@ export class MessageHelper {
     if (action === 'copy') {
       try {
         await navigator.clipboard.writeText(this.previewProcessedText);
-        this.showPreviewFeedback('Copied to clipboard!');
+        this.showPreviewFeedback(this.t('copiedToClipboard', 'Copied to clipboard!'));
       } catch (error) {
         console.error('Failed to copy:', error);
-        this.showPreviewFeedback('Failed to copy', true);
+        this.showPreviewFeedback(this.t('failedToCopy', 'Failed to copy'), true);
       }
     } else if (action === 'replace') {
       this.updateInputText(this.previewInputElement, this.previewProcessedText);
-      this.showPreviewFeedback('Text replaced!');
+      this.showPreviewFeedback(this.t('textReplaced', 'Text replaced!'));
       setTimeout(() => this.hideResultPreview(), 1000);
     }
   }
@@ -821,8 +977,6 @@ export class MessageHelper {
       }
     }, 2000);
   }
-
-
 
   /**
    * Handle keyboard events for preview
@@ -1063,8 +1217,6 @@ export class MessageHelper {
 
     document.head.appendChild(style);
   }
-
-
 
   /**
    * Cleanup method

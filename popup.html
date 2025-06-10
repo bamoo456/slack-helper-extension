@@ -31,6 +31,7 @@
       <button class="tab-button active" data-tab="prompt">📝 AI 提示詞</button>
       <button class="tab-button" data-tab="scroll">⚙️ 滾動設定</button>
       <button class="tab-button" data-tab="sync">🔄 模型同步</button>
+      <button class="tab-button" data-tab="llm">🤖 LLM API 設定</button>
     </div>
 
     <!-- AI提示詞 設定區域 -->
@@ -188,6 +189,86 @@
         </div>
 
         <div id="syncActionStatus" class="sync-status"></div>
+      </div>
+    </div>
+
+    <!-- LLM API 設定區域 -->
+    <div class="tab-content" id="llm-tab">
+      <div class="llm-settings-section">
+        <h3>🤖 LLM API 設定</h3>
+        <div class="settings-hint" style="font-size: 13px; color: #666; margin-bottom: 16px;">
+          配置 LLM API 提供商以啟用訊息增強功能（重新表達、改進、修正語法等）。
+        </div>
+
+        <!-- 提供商選擇 -->
+        <div class="settings-group">
+          <h4>🔧 API 提供商</h4>
+          <div class="setting-row">
+            <label for="llmProviderSelect">選擇 LLM 提供商</label>
+            <select id="llmProviderSelect" class="llm-provider-dropdown">
+              <option value="">請選擇提供商...</option>
+              <option value="openai">OpenAI Settings</option>
+              <option value="openai-compatible">OpenAI Compatible Settings</option>
+            </select>
+            <small>選擇您要使用的 LLM API 提供商</small>
+          </div>
+        </div>
+
+        <!-- OpenAI 設定 -->
+        <div class="settings-group llm-provider-config" id="openai-config" style="display: none;">
+          <h4>🔑 OpenAI API 設定</h4>
+          <div class="setting-row">
+            <label for="openaiApiKey">OpenAI API Key</label>
+            <input type="password" id="openaiApiKey" placeholder="sk-..." class="llm-input">
+            <small>輸入您的 OpenAI API Key（將安全儲存在本地）</small>
+          </div>
+
+        </div>
+
+        <!-- OpenAI Compatible 設定 -->
+        <div class="settings-group llm-provider-config" id="openai-compatible-config" style="display: none;">
+          <h4>🔧 OpenAI Compatible API 設定</h4>
+          <div class="setting-row">
+            <label for="compatibleBaseUrl">API Base URL</label>
+            <input type="url" id="compatibleBaseUrl" placeholder="https://your-api-server.com/v1" class="llm-input">
+            <small>輸入您的 API 服務器基礎 URL</small>
+          </div>
+          <div class="setting-row">
+            <label for="compatibleModel">模型名稱</label>
+            <input type="text" id="compatibleModel" placeholder="gpt-3.5-turbo" class="llm-input">
+            <small>輸入要使用的模型名稱</small>
+          </div>
+          <div class="setting-row">
+            <label for="compatibleHeaders">自定義 Headers（JSON 格式，可選）</label>
+            <textarea id="compatibleHeaders" placeholder='{"Authorization": "Bearer your-token", "Custom-Header": "value"}' rows="3" class="llm-textarea"></textarea>
+            <small>輸入額外的 HTTP Headers（JSON 格式）</small>
+          </div>
+          <div class="setting-row">
+            <label for="compatibleParams">自定義請求參數（JSON 格式，可選）</label>
+            <textarea id="compatibleParams" placeholder='{"temperature": 0.7, "max_tokens": 500}' rows="3" class="llm-textarea"></textarea>
+            <small>輸入額外的請求參數（JSON 格式）</small>
+          </div>
+        </div>
+
+        <!-- 測試連接 -->
+        <div class="settings-group" id="llm-test-section" style="display: none;">
+          <h4>🧪 測試連接</h4>
+          <div class="setting-row">
+            <button id="testLLMConnection" class="btn-secondary">
+              🔍 測試 API 連接
+            </button>
+            <div id="llmTestStatus" class="llm-test-status"></div>
+          </div>
+        </div>
+
+        <!-- 操作按鈕 -->
+        <div class="llm-settings-actions" id="llm-actions" style="display: none;">
+          <button id="saveLLMSettings" class="btn-primary">💾 保存設定</button>
+          <button id="resetLLMSettings" class="btn-secondary">🔄 重置設定</button>
+          <button id="loadLLMSettings" class="btn-tertiary">📥 載入當前設定</button>
+        </div>
+        
+        <div id="llmActionStatus" class="llm-status"></div>
       </div>
     </div>
 
