@@ -77,16 +77,16 @@ document.addEventListener('DOMContentLoaded', function() {
     try {
       // 檢查是否在 Chrome Extension 環境中
       if (typeof chrome !== 'undefined' && chrome.storage) {
-        // 載入保存的語言設定
-        chrome.storage.local.get(['selectedLanguage'], function(result) {
-          const savedLanguage = result.selectedLanguage || 'zh-TW';
+      // 載入保存的語言設定
+      chrome.storage.local.get(['selectedLanguage'], function(result) {
+        const savedLanguage = result.selectedLanguage || 'zh-TW';
           if (languageSelect) {
-            languageSelect.value = savedLanguage;
+        languageSelect.value = savedLanguage;
           }
-          
-          // 應用語言設定
-          applyLanguage(savedLanguage);
-        });
+        
+        // 應用語言設定
+        applyLanguage(savedLanguage);
+      });
       } else {
         console.warn('Chrome Extension API not available, using default language');
         // 使用預設語言

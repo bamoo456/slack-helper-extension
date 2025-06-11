@@ -530,7 +530,7 @@ export class MessageHelper {
         const customPrompt = textarea.value.trim();
         if (customPrompt) {
           this.handleCustomPrompt(customPrompt, button).then(() => {
-            this.hideRefineDropdown();
+          this.hideRefineDropdown();
           }).catch((error) => {
             console.error('Error handling custom prompt:', error);
             this.hideRefineDropdown();
@@ -583,7 +583,7 @@ export class MessageHelper {
     const inputElement = this.findInputForButton(button);
     if (!inputElement) return;
 
-    const currentText = inputElement.textContent || inputElement.value || '';
+    const currentText = this.extractTextFromInput(inputElement);
     
     if (!currentText.trim()) {
       alert(this.t('pleaseTypeMessage', 'Please type a message first before applying custom prompt.'));
@@ -662,7 +662,7 @@ export class MessageHelper {
     const inputElement = this.findInputForButton(button);
     if (!inputElement) return;
 
-    const currentText = inputElement.textContent || inputElement.value || '';
+    const currentText = this.extractTextFromInput(inputElement);
     
     if (!currentText.trim()) {
       alert(this.t('pleaseTypeMessageBeforeRefining', 'Please type a message first before refining it.'));
@@ -720,10 +720,190 @@ export class MessageHelper {
 
     for (const selector of this.inputSelectors) {
       const input = composer.querySelector(selector);
-      if (input) return input;
+      if (input) {
+        // If we found a Quill container, try to find the actual editor
+        if (input.classList.contains('ql-container') || input.classList.contains('c-texty_input_unstyled')) {
+          const quillEditor = input.querySelector('.ql-editor');
+          if (quillEditor) {
+            return quillEditor; // Return the actual editor element
+          }
+        }
+        return input;
+      }
     }
 
     return null;
+  }
+
+  /**
+   * Extract text from input element while preserving formatting
+   */
+  extractTextFromInput(inputElement) {
+    if (!inputElement) return '';
+
+    // For regular input/textarea elements
+    if (inputElement.tagName === 'TEXTAREA' || inputElement.tagName === 'INPUT') {
+      const value = inputElement.value || '';
+      return value;
+    }
+
+    // For contenteditable elements (like Slack's rich text editor)
+    if (inputElement.contentEditable === 'true') {
+      const extractedText = this.extractFormattedText(inputElement);
+      console.log('Message Helper: Extracted text with formatting:', extractedText);
+      return extractedText;
+    }
+
+    // Fallback to textContent
+    const fallbackText = inputElement.textContent || '';
+    return fallbackText;
+  }
+
+  /**
+   * Extract formatted text from contenteditable element
+   * Preserves line breaks and emojis
+   */
+  extractFormattedText(element) {
+    // For Slack's Quill editor, we need to handle the specific structure
+    const html = element.innerHTML;
+    
+    // Create a temporary element to parse the HTML
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html;
+    
+    let text = '';
+    let isFirstParagraph = true;
+    
+    // Process each child node (mainly <p> tags in Slack)
+    const processNode = (node) => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        return node.textContent;
+      } else if (node.nodeType === Node.ELEMENT_NODE) {
+        const tagName = node.tagName.toLowerCase();
+        
+        switch (tagName) {
+          case 'p':
+            // Process paragraph content
+            let paragraphContent = '';
+            let hasRealContent = false;
+            let isEmptyParagraph = false;
+            
+            // Check if this paragraph only contains <br> (empty paragraph)
+            if (node.childNodes.length === 1 && 
+                node.childNodes[0].nodeType === Node.ELEMENT_NODE && 
+                node.childNodes[0].tagName.toLowerCase() === 'br') {
+              isEmptyParagraph = true;
+            }
+            
+            for (const child of node.childNodes) {
+              const childContent = processNode(child);
+              paragraphContent += childContent;
+              
+              // Check if this paragraph has real content (not just <br>)
+              if (child.nodeType === Node.TEXT_NODE && child.textContent.trim()) {
+                hasRealContent = true;
+              } else if (child.nodeType === Node.ELEMENT_NODE && child.tagName.toLowerCase() !== 'br') {
+                hasRealContent = true;
+              }
+            }
+            
+            // Handle different paragraph types:
+            if (isFirstParagraph) {
+              // First paragraph - no leading line break
+              isFirstParagraph = false;
+              return paragraphContent;
+            } else if (isEmptyParagraph) {
+              // Empty paragraph (only <br>) - represents a blank line
+              return '\n';
+            } else if (hasRealContent || paragraphContent.trim()) {
+              // Paragraph with content - add line break before it
+              return '\n' + paragraphContent;
+            } else {
+              // Empty paragraph without <br> - just add line break
+              return '\n';
+            }
+            
+          case 'br':
+            // Skip standalone <br> in paragraphs - they're handled by paragraph logic
+            return '';
+            
+          case 'img':
+            // Handle emoji images - prioritize data-stringify-text
+            const stringifyText = node.getAttribute('data-stringify-text');
+            const dataTitle = node.getAttribute('data-title');
+            const alt = node.getAttribute('alt');
+            const title = node.getAttribute('title');
+            const dataEmoji = node.getAttribute('data-emoji');
+            const ariaLabel = node.getAttribute('aria-label');
+            
+            return stringifyText || dataTitle || dataEmoji || alt || title || ariaLabel || '';
+            
+          case 'span':
+            // Check if it's an emoji span
+            const emojiData = node.getAttribute('data-emoji');
+            if (emojiData) {
+              return emojiData;
+            }
+            
+            // Check for emoji class or other indicators
+            const className = node.className || '';
+            if (className.includes('emoji') || className.includes('emoticon')) {
+              const spanStringify = node.getAttribute('data-stringify-text');
+              const spanText = spanStringify || node.textContent || node.getAttribute('title') || node.getAttribute('aria-label') || '';
+              return spanText;
+            }
+            
+            // Regular span, process children
+            let spanContent = '';
+            for (const child of node.childNodes) {
+              spanContent += processNode(child);
+            }
+            return spanContent;
+            
+          default:
+            // For other elements, process children
+            let defaultContent = '';
+            for (const child of node.childNodes) {
+              defaultContent += processNode(child);
+            }
+            return defaultContent;
+        }
+      }
+      return '';
+    };
+    
+    // Process all child nodes
+    for (const child of tempDiv.childNodes) {
+      text += processNode(child);
+    }
+    
+    // Clean up the text - be more conservative with line break removal
+    text = text
+      .replace(/\n{3,}/g, '\n\n') // Replace 3+ consecutive line breaks with 2
+      .replace(/^\n+/, '') // Remove leading line breaks
+      .replace(/\n+$/, ''); // Remove trailing line breaks
+    
+    console.log('Message Helper: Extracted formatted text:', JSON.stringify(text));
+    
+    // If we didn't get good results, fall back to simpler method
+    if (!text || text.length < 3) {
+      return this.simpleTextExtraction(element);
+    }
+    
+    return text;
+  }
+
+  /**
+   * Simple text extraction fallback
+   */
+  simpleTextExtraction(element) {
+    // Use innerText if available (preserves line breaks better than textContent)
+    if (element.innerText !== undefined) {
+      return element.innerText;
+    }
+    
+    // Fallback to textContent
+    return element.textContent || '';
   }
 
   /**
@@ -784,15 +964,28 @@ export class MessageHelper {
 
     // Handle different types of input elements
     if (inputElement.contentEditable === 'true') {
-      // For contenteditable elements
-      inputElement.textContent = newText;
-      
-      // Trigger input events to notify Slack
-      const inputEvent = new Event('input', { bubbles: true });
-      inputElement.dispatchEvent(inputEvent);
-      
-      // Move cursor to end
-      this.moveCursorToEnd(inputElement);
+      // Check if this is already a Quill editor (.ql-editor)
+      if (inputElement.classList.contains('ql-editor')) {
+        // This is the actual Quill editor element
+        this.updateQuillEditor(inputElement, newText);
+      } else {
+        // Check if this contains a Quill editor (Slack's message input container)
+        const quillEditor = inputElement.querySelector('.ql-editor');
+        if (quillEditor) {
+          // Handle Quill editor specifically
+          this.updateQuillEditor(quillEditor, newText);
+        } else {
+          // For regular contenteditable elements
+          inputElement.textContent = newText;
+          
+          // Trigger input events to notify Slack
+          const inputEvent = new Event('input', { bubbles: true });
+          inputElement.dispatchEvent(inputEvent);
+          
+          // Move cursor to end
+          this.moveCursorToEnd(inputElement);
+        }
+      }
     } else if (inputElement.tagName === 'TEXTAREA' || inputElement.tagName === 'INPUT') {
       // For regular input/textarea elements
       inputElement.value = newText;
@@ -809,6 +1002,79 @@ export class MessageHelper {
 
     // Focus the input element
     inputElement.focus();
+  }
+
+  /**
+   * Update Quill editor content (used by Slack)
+   */
+  updateQuillEditor(quillEditor, newText) {
+    try {
+      // Remove the ql-blank class if it exists
+      quillEditor.classList.remove('ql-blank');
+      
+      // Clear existing content
+      quillEditor.innerHTML = '';
+      
+      // Split text by lines and create appropriate elements
+      const lines = newText.split('\n');
+      
+      // Create paragraph elements for each line
+      lines.forEach((line, index) => {
+        if (line.trim()) {
+          // Create a paragraph for non-empty lines
+          const paragraph = document.createElement('p');
+          paragraph.textContent = line;
+          quillEditor.appendChild(paragraph);
+        } else {
+          // Create empty paragraph for empty lines
+          const emptyP = document.createElement('p');
+          emptyP.appendChild(document.createElement('br'));
+          quillEditor.appendChild(emptyP);
+        }
+      });
+      
+      // If no content was added, add an empty paragraph
+      if (!quillEditor.hasChildNodes()) {
+        const emptyP = document.createElement('p');
+        emptyP.appendChild(document.createElement('br'));
+        quillEditor.appendChild(emptyP);
+      }
+      
+      // Trigger input events to notify Slack
+      const inputEvent = new Event('input', { bubbles: true, cancelable: true });
+      const changeEvent = new Event('change', { bubbles: true, cancelable: true });
+      
+      quillEditor.dispatchEvent(inputEvent);
+      quillEditor.dispatchEvent(changeEvent);
+      
+      // Also trigger on the parent container
+      const container = quillEditor.closest('[data-qa="message_input"]');
+      if (container) {
+        container.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+      
+      // Move cursor to end
+      this.moveCursorToEnd(quillEditor);
+      
+      // Focus the editor
+      quillEditor.focus();
+      
+      console.log('Updated Quill editor with formatted text:', newText);
+    } catch (error) {
+      console.error('Error updating Quill editor:', error);
+      // Fallback to simple text content update
+      quillEditor.textContent = newText;
+      quillEditor.focus();
+    }
+  }
+
+  /**
+   * Insert formatted text into an element, handling emojis
+   */
+  insertFormattedText(element, text) {
+    // Simple approach: just set text content
+    // Slack will handle emoji rendering automatically
+    element.textContent = text;
   }
 
   /**
@@ -1008,12 +1274,13 @@ export class MessageHelper {
   }
 
   /**
-   * Escape HTML for safe display
+   * Escape HTML for safe display while preserving line breaks
    */
   escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
-    return div.innerHTML;
+    // Replace line breaks with <br> tags for proper display
+    return div.innerHTML.replace(/\n/g, '<br>');
   }
 
   /**
