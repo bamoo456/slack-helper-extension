@@ -88,15 +88,50 @@ export class SlackMessageFormatter {
       return '';
     };
     
-    // Process all child nodes
-    for (const child of tempDiv.childNodes) {
+    // Helper to identify code block divs
+    const isCodeBlockDiv = (n) => {
+      return (
+        n &&
+        n.nodeType === Node.ELEMENT_NODE &&
+        n.tagName.toLowerCase() === 'div' &&
+        (n.className || '').includes('ql-code-block')
+      );
+    };
+
+    const children = Array.from(tempDiv.childNodes);
+    for (let i = 0; i < children.length; i++) {
+      const child = children[i];
+
+      // Group consecutive Slack code block divs into a single fenced code block
+      if (isCodeBlockDiv(child)) {
+        let codeLines = [];
+        // Collect all consecutive code block divs
+        while (i < children.length && isCodeBlockDiv(children[i])) {
+          const codeText = children[i].textContent || '';
+          codeLines.push(codeText);
+          i++;
+        }
+        // We advanced one step too far in the while loop; step back so the for-loop increment lands correctly
+        i--;
+
+        // Build single markdown fenced block
+        const combinedCode = codeLines.join('\n');
+        text += `\n\`\`\`\n${combinedCode}\n\`\`\`\n`;
+
+        // Continue to next iteration
+        continue;
+      }
+
+      // Non code-block elements – use existing processing logic
       const childResult = processNode(child);
       text += childResult;
-      
+
       // Update isFirstParagraph flag after processing first paragraph
-      if (child.nodeType === Node.ELEMENT_NODE && 
-          child.tagName.toLowerCase() === 'p' && 
-          isFirstParagraph) {
+      if (
+        child.nodeType === Node.ELEMENT_NODE &&
+        child.tagName.toLowerCase() === 'p' &&
+        isFirstParagraph
+      ) {
         isFirstParagraph = false;
       }
     }
@@ -302,9 +337,17 @@ export class SlackMessageFormatter {
     
     let html = markdownText;
     
-    // Convert code blocks first (to avoid conflicts with inline code)
-    html = html.replace(/```\n?([\s\S]*?)\n?```/g, (match, code) => {
-      return `<div class="ql-code-block">${this._escapeHtml(code.trim())}</div>`;
+    // Convert fenced code blocks first (```[lang]?\n ... \n```)
+    // Slack expects each code line as its own <div class="ql-code-block">line</div>
+    html = html.replace(/```[^\n]*\n([\s\S]*?)\n```/g, (match, code) => {
+      // Normalize line endings and split
+      const lines = code.replace(/\r/g, '').split('\n');
+      const divs = lines.map((ln) => {
+        // Preserve empty lines within code block
+        const safeLine = ln === '' ? '<br>' : this._escapeHtml(ln);
+        return `<div class="ql-code-block">${safeLine}</div>`;
+      });
+      return divs.join('');
     });
     
     // Convert inline code
