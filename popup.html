@@ -220,7 +220,6 @@
             <input type="password" id="openaiApiKey" placeholder="sk-..." class="llm-input">
             <small>輸入您的 OpenAI API Key（將安全儲存在本地）</small>
           </div>
-
         </div>
 
         <!-- OpenAI Compatible 設定 -->
@@ -248,7 +247,47 @@
           </div>
         </div>
 
+        <!-- 用戶指定模型管理 -->
+        <div class="settings-group" id="user-models-section" style="display: none;">
+          <h4>📋 支援的模型管理</h4>
+          <div class="settings-hint" style="font-size: 13px; color: #666; margin-bottom: 12px;">
+            管理您要支援的模型列表。這些模型將在訊息增強功能中可供選擇。
+          </div>
+          
+          <!-- 添加新模型 -->
+          <div class="add-model-container">
+            <div class="add-model-form">
+              <div class="model-input-group">
+                <input type="text" id="newModelName" placeholder="輸入模型名稱（例如：gpt-4, claude-3-sonnet）" class="model-input">
+                <button id="addModelBtn" class="btn-add-model">➕ 添加模型</button>
+              </div>
+              <small>輸入要支援的模型名稱，支援 OpenAI 和其他相容 API 的模型</small>
+            </div>
+          </div>
 
+          <!-- 當前模型列表 -->
+          <div class="current-models-container">
+            <h5>📝 當前支援的模型：</h5>
+            <div id="currentModelsList" class="models-list">
+              <div class="models-placeholder">載入中...</div>
+            </div>
+            <div class="models-info">
+              <span id="modelsCountInfo">模型數量：0</span>
+              <span id="defaultModelInfo">預設模型：未設定</span>
+            </div>
+          </div>
+
+          <!-- 預設模型選擇 -->
+          <div class="default-model-container">
+            <div class="setting-row">
+              <label for="defaultModelSelect">預設模型</label>
+              <select id="defaultModelSelect" class="default-model-dropdown">
+                <option value="">選擇預設模型...</option>
+              </select>
+              <small>選擇訊息增強功能的預設模型</small>
+            </div>
+          </div>
+        </div>
 
         <!-- 操作按鈕 -->
         <div class="llm-controls" id="llm-actions" style="display: none;">

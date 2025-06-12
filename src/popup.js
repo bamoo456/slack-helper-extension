@@ -463,7 +463,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (settingsGroups[0]) settingsGroups[0].textContent = llmSection.apiProvider;
     if (settingsGroups[1]) settingsGroups[1].textContent = llmSection.openaiConfig;
     if (settingsGroups[2]) settingsGroups[2].textContent = llmSection.compatibleConfig;
-
+    if (settingsGroups[3]) settingsGroups[3].textContent = llmSection.userModelsTitle;
 
     // 更新提供商選擇
     const providerLabel = document.querySelector('label[for="llmProviderSelect"]');
@@ -483,7 +483,8 @@ document.addEventListener('DOMContentLoaded', function() {
       { selector: 'label[for="compatibleBaseUrl"]', text: llmSection.compatibleBaseUrl },
       { selector: 'label[for="compatibleModel"]', text: llmSection.compatibleModel },
       { selector: 'label[for="compatibleHeaders"]', text: llmSection.compatibleHeaders },
-      { selector: 'label[for="compatibleParams"]', text: llmSection.compatibleParams }
+      { selector: 'label[for="compatibleParams"]', text: llmSection.compatibleParams },
+      { selector: 'label[for="defaultModelSelect"]', text: llmSection.defaultModelSelectLabel }
     ];
 
     labelMappings.forEach(mapping => {
@@ -499,7 +500,8 @@ document.addEventListener('DOMContentLoaded', function() {
       { id: 'compatibleBaseUrl', placeholder: llmSection.compatibleBaseUrlPlaceholder },
       { id: 'compatibleModel', placeholder: llmSection.compatibleModelPlaceholder },
       { id: 'compatibleHeaders', placeholder: llmSection.compatibleHeadersPlaceholder },
-      { id: 'compatibleParams', placeholder: llmSection.compatibleParamsPlaceholder }
+      { id: 'compatibleParams', placeholder: llmSection.compatibleParamsPlaceholder },
+      { id: 'newModelName', placeholder: llmSection.addModelPlaceholder }
     ];
 
     placeholderMappings.forEach(mapping => {
@@ -509,17 +511,28 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
 
+    // 更新模型管理相關文字
+    const userModelsHint = document.querySelector('#user-models-section .settings-hint');
+    if (userModelsHint) userModelsHint.textContent = llmSection.userModelsHint;
 
+    const addModelBtn = document.getElementById('addModelBtn');
+    if (addModelBtn) addModelBtn.textContent = llmSection.addModelBtn;
+
+    const addModelDesc = document.querySelector('.add-model-form small');
+    if (addModelDesc) addModelDesc.textContent = llmSection.addModelDesc;
+
+    const currentModelsTitle = document.querySelector('.current-models-container h5');
+    if (currentModelsTitle) currentModelsTitle.textContent = llmSection.currentModelsTitle;
+
+    const defaultModelSelectPlaceholder = document.querySelector('#defaultModelSelect option[value=""]');
+    if (defaultModelSelectPlaceholder) defaultModelSelectPlaceholder.textContent = llmSection.defaultModelSelectPlaceholder;
 
     // 更新按鈕
-
     const saveLLMSettings = document.getElementById('saveLLMSettings');
     if (saveLLMSettings) saveLLMSettings.textContent = llmSection.save;
 
     const resetLLMSettings = document.getElementById('resetLLMSettings');
     if (resetLLMSettings) resetLLMSettings.textContent = llmSection.reset;
-
-
 
     // 更新所有描述文字 - 使用更精確的方法
     const descriptionMappings = [
@@ -528,7 +541,8 @@ document.addEventListener('DOMContentLoaded', function() {
       { selector: 'label[for="compatibleBaseUrl"]', text: llmSection.compatibleBaseUrlDesc },
       { selector: 'label[for="compatibleModel"]', text: llmSection.compatibleModelDesc },
       { selector: 'label[for="compatibleHeaders"]', text: llmSection.compatibleHeadersDesc },
-      { selector: 'label[for="compatibleParams"]', text: llmSection.compatibleParamsDesc }
+      { selector: 'label[for="compatibleParams"]', text: llmSection.compatibleParamsDesc },
+      { selector: 'label[for="defaultModelSelect"]', text: llmSection.defaultModelSelectDesc }
     ];
 
     descriptionMappings.forEach(mapping => {
@@ -541,6 +555,52 @@ document.addEventListener('DOMContentLoaded', function() {
             small.textContent = mapping.text;
           }
         }
+      }
+    });
+
+    // 更新現有的模型列表項目中的按鈕文字
+    updateExistingModelListTexts(llmSection);
+  }
+
+  function updateExistingModelListTexts(llmSection) {
+    // 更新模型列表中的按鈕文字
+    const setDefaultBtns = document.querySelectorAll('.btn-set-default');
+    setDefaultBtns.forEach(btn => {
+      btn.textContent = llmSection.setDefaultBtn || '設為預設';
+    });
+
+    const removeBtns = document.querySelectorAll('.btn-remove-model');
+    removeBtns.forEach(btn => {
+      btn.textContent = llmSection.removeBtn || '移除';
+    });
+
+    const defaultBadges = document.querySelectorAll('.model-default-badge');
+    defaultBadges.forEach(badge => {
+      badge.textContent = llmSection.defaultBadge || '預設';
+    });
+
+    // 更新模型信息文字
+    const modelsCountInfo = document.getElementById('modelsCountInfo');
+    if (modelsCountInfo && llmSection.modelsCountLabel) {
+      const currentCount = modelsCountInfo.textContent.match(/\d+/);
+      if (currentCount) {
+        modelsCountInfo.textContent = llmSection.modelsCountLabel + currentCount[0];
+      }
+    }
+
+    const defaultModelInfo = document.getElementById('defaultModelInfo');
+    if (defaultModelInfo && llmSection.defaultModelLabel) {
+      const currentModel = defaultModelInfo.textContent.split('：')[1] || llmSection.notSet;
+      defaultModelInfo.textContent = llmSection.defaultModelLabel + currentModel;
+    }
+
+    // 更新 "添加於" 文字
+    const addedOnTexts = document.querySelectorAll('.model-item-meta span:first-child');
+    addedOnTexts.forEach(span => {
+      const text = span.textContent;
+      if (text.includes('添加於') || text.includes('Added on')) {
+        const date = text.split(/添加於|Added on/)[1];
+        span.textContent = (llmSection.addedOn || '添加於') + date;
       }
     });
   }
@@ -1374,10 +1434,18 @@ document.addEventListener('DOMContentLoaded', function() {
     const llmProviderSelect = document.getElementById('llmProviderSelect');
     const openaiConfig = document.getElementById('openai-config');
     const openaiCompatibleConfig = document.getElementById('openai-compatible-config');
+    const userModelsSection = document.getElementById('user-models-section');
     const llmActions = document.getElementById('llm-actions');
     const saveLLMSettings = document.getElementById('saveLLMSettings');
     const resetLLMSettings = document.getElementById('resetLLMSettings');
 
+    // 模型管理相關元素
+    const newModelName = document.getElementById('newModelName');
+    const addModelBtn = document.getElementById('addModelBtn');
+    const currentModelsList = document.getElementById('currentModelsList');
+    const modelsCountInfo = document.getElementById('modelsCountInfo');
+    const defaultModelInfo = document.getElementById('defaultModelInfo');
+    const defaultModelSelect = document.getElementById('defaultModelSelect');
 
     // 提供商選擇變更事件
     if (llmProviderSelect) {
@@ -1387,20 +1455,42 @@ document.addEventListener('DOMContentLoaded', function() {
         // 隱藏所有配置區域
         if (openaiConfig) openaiConfig.style.display = 'none';
         if (openaiCompatibleConfig) openaiCompatibleConfig.style.display = 'none';
+        if (userModelsSection) userModelsSection.style.display = 'none';
         if (llmActions) llmActions.style.display = 'none';
         
         // 根據選擇顯示對應的配置區域
         if (selectedProvider === 'openai') {
           if (openaiConfig) openaiConfig.style.display = 'block';
+          if (userModelsSection) userModelsSection.style.display = 'block';
           if (llmActions) llmActions.style.display = 'block';
         } else if (selectedProvider === 'openai-compatible') {
           if (openaiCompatibleConfig) openaiCompatibleConfig.style.display = 'block';
+          if (userModelsSection) userModelsSection.style.display = 'block';
           if (llmActions) llmActions.style.display = 'block';
+        }
+        
+        // 載入對應的模型列表
+        if (selectedProvider) {
+          loadUserModels();
         }
       });
     }
 
+    // 添加模型按鈕事件
+    if (addModelBtn) {
+      addModelBtn.addEventListener('click', function() {
+        addNewModel();
+      });
+    }
 
+    // 模型名稱輸入框回車事件
+    if (newModelName) {
+      newModelName.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          addNewModel();
+        }
+      });
+    }
 
     // 保存設定按鈕
     if (saveLLMSettings) {
@@ -1416,13 +1506,215 @@ document.addEventListener('DOMContentLoaded', function() {
       });
     }
 
-
-
     // 初始載入設定
     loadLLMSettingsHandler();
+
+    // 模型管理相關函數
+    function addNewModel() {
+      const modelName = newModelName?.value?.trim();
+      if (!modelName) {
+        const translations = currentTranslations?.llm || {};
+        showLLMActionStatus(translations.modelNameRequired || '請輸入模型名稱', 'error');
+        return;
+      }
+
+      // 檢查模型是否已存在
+      chrome.storage.local.get(['userModels'], function(result) {
+        const userModels = result.userModels || [];
+        
+        if (userModels.some(model => model.name === modelName)) {
+          const translations = currentTranslations?.llm || {};
+          showLLMActionStatus(translations.modelAlreadyExists || '模型已存在', 'error');
+          return;
+        }
+
+        // 添加新模型
+        const newModel = {
+          name: modelName,
+          addedAt: new Date().toISOString(),
+          isDefault: userModels.length === 0 // 第一個模型設為預設
+        };
+
+        userModels.push(newModel);
+
+        // 保存到 storage
+        chrome.storage.local.set({ userModels: userModels }, function() {
+          if (chrome.runtime.lastError) {
+            const translations = currentTranslations?.llm || {};
+            showLLMActionStatus(translations.addModelFailed || '添加模型失敗', 'error');
+          } else {
+            const translations = currentTranslations?.llm || {};
+            showLLMActionStatus(translations.modelAdded || `✅ 模型 "${modelName}" 已添加`, 'success');
+            newModelName.value = '';
+            loadUserModels();
+          }
+        });
+      });
+    }
+
+    function loadUserModels() {
+      chrome.storage.local.get(['userModels'], function(result) {
+        const userModels = result.userModels || [];
+        displayUserModels(userModels);
+        updateModelsInfo(userModels);
+        updateDefaultModelSelect(userModels);
+      });
+    }
+
+    function displayUserModels(models) {
+      if (!currentModelsList) return;
+
+      const translations = currentTranslations?.llm || {};
+
+      if (models.length === 0) {
+        currentModelsList.innerHTML = `<div class="models-placeholder">${translations.noModelsAdded || '尚未添加任何模型'}</div>`;
+        return;
+      }
+
+      const modelsHtml = models.map(model => {
+        const isDefault = model.isDefault;
+        const addedDate = new Date(model.addedAt).toLocaleDateString();
+        
+        return `
+          <div class="model-list-item ${isDefault ? 'default-model' : ''}" data-model-name="${model.name}">
+            <div class="model-item-info">
+              <div class="model-item-name">${model.name}</div>
+              <div class="model-item-meta">
+                <span>${translations.addedOn || '添加於'}: ${addedDate}</span>
+                ${isDefault ? `<span class="model-default-badge">${translations.defaultBadge || '預設'}</span>` : ''}
+              </div>
+            </div>
+            <div class="model-item-actions">
+              ${!isDefault ? `<button class="btn-set-default" data-model-name="${model.name}">${translations.setDefaultBtn || '設為預設'}</button>` : ''}
+              <button class="btn-remove-model" data-model-name="${model.name}">${translations.removeBtn || '移除'}</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      currentModelsList.innerHTML = modelsHtml;
+
+      // 添加事件監聽器
+      currentModelsList.querySelectorAll('.btn-set-default').forEach(btn => {
+        btn.addEventListener('click', function() {
+          const modelName = this.getAttribute('data-model-name');
+          setDefaultModel(modelName);
+        });
+      });
+
+      currentModelsList.querySelectorAll('.btn-remove-model').forEach(btn => {
+        btn.addEventListener('click', function() {
+          const modelName = this.getAttribute('data-model-name');
+          removeModel(modelName);
+        });
+      });
+    }
+
+    function setDefaultModel(modelName) {
+      chrome.storage.local.get(['userModels'], function(result) {
+        const userModels = result.userModels || [];
+        
+        // 清除所有預設標記
+        userModels.forEach(model => {
+          model.isDefault = false;
+        });
+        
+        // 設置新的預設模型
+        const targetModel = userModels.find(model => model.name === modelName);
+        if (targetModel) {
+          targetModel.isDefault = true;
+        }
+
+        chrome.storage.local.set({ userModels: userModels }, function() {
+          if (chrome.runtime.lastError) {
+            const translations = currentTranslations?.llm || {};
+            showLLMActionStatus(translations.setDefaultFailed || '設置預設模型失敗', 'error');
+          } else {
+            const translations = currentTranslations?.llm || {};
+            showLLMActionStatus(translations.defaultModelSet || `✅ "${modelName}" 已設為預設模型`, 'success');
+            loadUserModels();
+          }
+        });
+      });
+    }
+
+    function removeModel(modelName) {
+      const translations = currentTranslations?.llm || {};
+      const confirmMessage = translations.confirmRemoveModel || `確定要移除模型 "${modelName}" 嗎？`;
+      
+      if (!confirm(confirmMessage)) {
+        return;
+      }
+
+      chrome.storage.local.get(['userModels'], function(result) {
+        let userModels = result.userModels || [];
+        const removedModel = userModels.find(model => model.name === modelName);
+        
+        // 移除模型
+        userModels = userModels.filter(model => model.name !== modelName);
+        
+        // 如果移除的是預設模型，設置第一個模型為預設
+        if (removedModel?.isDefault && userModels.length > 0) {
+          userModels[0].isDefault = true;
+        }
+
+        chrome.storage.local.set({ userModels: userModels }, function() {
+          if (chrome.runtime.lastError) {
+            const translations = currentTranslations?.llm || {};
+            showLLMActionStatus(translations.removeModelFailed || '移除模型失敗', 'error');
+          } else {
+            const translations = currentTranslations?.llm || {};
+            showLLMActionStatus(translations.modelRemoved || `✅ 模型 "${modelName}" 已移除`, 'success');
+            loadUserModels();
+          }
+        });
+      });
+    }
+
+    function updateModelsInfo(models) {
+      const translations = currentTranslations?.llm || {};
+      
+      if (modelsCountInfo) {
+        modelsCountInfo.textContent = `${translations.modelsCountLabel || '模型數量：'}${models.length}`;
+      }
+      
+      if (defaultModelInfo) {
+        const defaultModel = models.find(model => model.isDefault);
+        defaultModelInfo.textContent = `${translations.defaultModelLabel || '預設模型：'}${defaultModel ? defaultModel.name : (translations.notSet || '未設定')}`;
+      }
+    }
+
+    function updateDefaultModelSelect(models) {
+      if (!defaultModelSelect) return;
+
+      const translations = currentTranslations?.llm || {};
+
+      // 清空選項
+      defaultModelSelect.innerHTML = `<option value="">${translations.defaultModelSelectPlaceholder || '選擇預設模型...'}</option>`;
+      
+      // 添加模型選項
+      models.forEach(model => {
+        const option = document.createElement('option');
+        option.value = model.name;
+        option.textContent = model.name;
+        if (model.isDefault) {
+          option.selected = true;
+        }
+        defaultModelSelect.appendChild(option);
+      });
+
+      // 添加變更事件監聽器
+      defaultModelSelect.removeEventListener('change', handleDefaultModelChange);
+      defaultModelSelect.addEventListener('change', handleDefaultModelChange);
+    }
+
+    function handleDefaultModelChange() {
+      const selectedModel = defaultModelSelect.value;
+      if (selectedModel) {
+        setDefaultModel(selectedModel);
+      }
+    }
   }
-
-
 
   function saveLLMSettingsHandler() {
     const llmProviderSelect = document.getElementById('llmProviderSelect');
@@ -1526,16 +1818,18 @@ document.addEventListener('DOMContentLoaded', function() {
     // 隱藏所有配置區域
     const openaiConfig = document.getElementById('openai-config');
     const openaiCompatibleConfig = document.getElementById('openai-compatible-config');
+    const userModelsSection = document.getElementById('user-models-section');
     const llmTestSection = document.getElementById('llm-test-section');
     const llmActions = document.getElementById('llm-actions');
     
     if (openaiConfig) openaiConfig.style.display = 'none';
     if (openaiCompatibleConfig) openaiCompatibleConfig.style.display = 'none';
+    if (userModelsSection) userModelsSection.style.display = 'none';
     if (llmTestSection) llmTestSection.style.display = 'none';
     if (llmActions) llmActions.style.display = 'none';
     
-    // 清除保存的設定
-    chrome.storage.local.remove(['llmSettings'], function() {
+    // 清除保存的設定（包括用戶模型）
+    chrome.storage.local.remove(['llmSettings', 'userModels'], function() {
       const translations = currentTranslations?.llm || {};
       showLLMActionStatus(translations.resetSuccess || '🔄 LLM 設定已重置', 'info');
     });

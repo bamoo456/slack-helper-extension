@@ -1342,4 +1342,281 @@ h4 {
   .llm-settings-actions button, .llm-buttons button {
     width: 100%;
   }
+}
+
+/* 用戶指定模型管理樣式 */
+#user-models-section {
+  border-top: 1px solid #e9ecef;
+  padding-top: 16px;
+  margin-top: 16px;
+}
+
+.add-model-container {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 16px;
+  border: 1px solid #e9ecef;
+}
+
+.add-model-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.model-input-group {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.model-input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 2px solid #e9ecef;
+  border-radius: 6px;
+  font-size: 13px;
+  transition: all 0.2s ease;
+  background: white;
+}
+
+.model-input:hover {
+  border-color: #4A154B;
+}
+
+.model-input:focus {
+  outline: none;
+  border-color: #4A154B;
+  box-shadow: 0 0 0 2px rgba(74, 21, 75, 0.1);
+}
+
+.model-input::placeholder {
+  color: #999;
+  font-style: italic;
+}
+
+.btn-add-model {
+  background: #28a745;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-add-model:hover {
+  background: #218838;
+  transform: translateY(-1px);
+}
+
+.btn-add-model:active {
+  transform: translateY(0);
+}
+
+.btn-add-model:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.current-models-container {
+  margin-bottom: 16px;
+}
+
+.current-models-container h5 {
+  margin: 0 0 8px 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #4A154B;
+}
+
+.models-list {
+  background: white;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+  margin-bottom: 8px;
+}
+
+.models-list:empty::before {
+  content: "尚未添加任何模型";
+  display: block;
+  padding: 16px;
+  text-align: center;
+  color: #999;
+  font-style: italic;
+  font-size: 13px;
+}
+
+.model-list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  border-bottom: 1px solid #f0f0f0;
+  transition: background-color 0.2s ease;
+}
+
+.model-list-item:last-child {
+  border-bottom: none;
+}
+
+.model-list-item:hover {
+  background: #f8f9fa;
+}
+
+.model-list-item.default-model {
+  background: #e8f5e8;
+  border-left: 3px solid #28a745;
+}
+
+.model-list-item.default-model:hover {
+  background: #d4edda;
+}
+
+.model-item-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.model-item-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 2px;
+}
+
+.model-item-meta {
+  font-size: 11px;
+  color: #666;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.model-default-badge {
+  background: #28a745;
+  color: white;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-weight: 500;
+}
+
+.model-item-actions {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.btn-set-default {
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-set-default:hover {
+  background: #0056b3;
+}
+
+.btn-remove-model {
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-remove-model:hover {
+  background: #c82333;
+}
+
+.models-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: #666;
+  padding: 4px 0;
+}
+
+.models-info span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.default-model-container {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 12px;
+  border: 1px solid #e9ecef;
+}
+
+.default-model-dropdown {
+  width: 100%;
+  padding: 8px 12px;
+  border: 2px solid #e9ecef;
+  border-radius: 6px;
+  font-size: 13px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.default-model-dropdown:hover {
+  border-color: #4A154B;
+}
+
+.default-model-dropdown:focus {
+  outline: none;
+  border-color: #4A154B;
+  box-shadow: 0 0 0 2px rgba(74, 21, 75, 0.1);
+}
+
+/* 響應式設計 */
+@media (max-width: 480px) {
+  .model-input-group {
+    flex-direction: column;
+  }
+  
+  .model-input {
+    width: 100%;
+  }
+  
+  .btn-add-model {
+    width: 100%;
+  }
+  
+  .model-list-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .model-item-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  
+  .models-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
 } 
