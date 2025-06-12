@@ -484,7 +484,7 @@ document.addEventListener('DOMContentLoaded', function() {
       { selector: 'label[for="compatibleModel"]', text: llmSection.compatibleModel },
       { selector: 'label[for="compatibleHeaders"]', text: llmSection.compatibleHeaders },
       { selector: 'label[for="compatibleParams"]', text: llmSection.compatibleParams },
-      { selector: 'label[for="defaultModelSelect"]', text: llmSection.defaultModelSelectLabel }
+      { selector: 'label[for="globalDefaultModelSelect"]', text: llmSection.globalDefaultModelLabel || '全局預設模型' }
     ];
 
     labelMappings.forEach(mapping => {
@@ -501,7 +501,8 @@ document.addEventListener('DOMContentLoaded', function() {
       { id: 'compatibleModel', placeholder: llmSection.compatibleModelPlaceholder },
       { id: 'compatibleHeaders', placeholder: llmSection.compatibleHeadersPlaceholder },
       { id: 'compatibleParams', placeholder: llmSection.compatibleParamsPlaceholder },
-      { id: 'newModelName', placeholder: llmSection.addModelPlaceholder }
+      { id: 'newOpenaiModelName', placeholder: llmSection.openaiModelPlaceholder || '輸入 OpenAI 模型名稱（例如：gpt-4, gpt-3.5-turbo）' },
+      { id: 'newCompatibleModelName', placeholder: llmSection.compatibleModelPlaceholder || '輸入 Compatible 模型名稱（例如：claude-3-sonnet, llama-2）' }
     ];
 
     placeholderMappings.forEach(mapping => {
@@ -515,17 +516,35 @@ document.addEventListener('DOMContentLoaded', function() {
     const userModelsHint = document.querySelector('#user-models-section .settings-hint');
     if (userModelsHint) userModelsHint.textContent = llmSection.userModelsHint;
 
-    const addModelBtn = document.getElementById('addModelBtn');
-    if (addModelBtn) addModelBtn.textContent = llmSection.addModelBtn;
+    // 更新 OpenAI 模型管理區域
+    const openaiModelsTitle = document.querySelector('#openai-models-section h5');
+    if (openaiModelsTitle) openaiModelsTitle.textContent = llmSection.openaiModelsTitle || '🤖 OpenAI 模型';
 
-    const addModelDesc = document.querySelector('.add-model-form small');
-    if (addModelDesc) addModelDesc.textContent = llmSection.addModelDesc;
+    const addOpenaiModelBtn = document.getElementById('addOpenaiModelBtn');
+    if (addOpenaiModelBtn) addOpenaiModelBtn.textContent = llmSection.addModelBtn;
 
-    const currentModelsTitle = document.querySelector('.current-models-container h5');
-    if (currentModelsTitle) currentModelsTitle.textContent = llmSection.currentModelsTitle;
+    const openaiAddModelDesc = document.querySelector('#openai-models-section .add-model-form small');
+    if (openaiAddModelDesc) openaiAddModelDesc.textContent = llmSection.openaiAddModelDesc || '輸入要支援的 OpenAI 模型名稱';
 
-    const defaultModelSelectPlaceholder = document.querySelector('#defaultModelSelect option[value=""]');
-    if (defaultModelSelectPlaceholder) defaultModelSelectPlaceholder.textContent = llmSection.defaultModelSelectPlaceholder;
+    const openaiCurrentModelsTitle = document.querySelector('#openai-models-section h6');
+    if (openaiCurrentModelsTitle) openaiCurrentModelsTitle.textContent = llmSection.openaiCurrentModelsTitle || '📝 當前 OpenAI 模型：';
+
+    // 更新 OpenAI Compatible 模型管理區域
+    const compatibleModelsTitle = document.querySelector('#compatible-models-section h5');
+    if (compatibleModelsTitle) compatibleModelsTitle.textContent = llmSection.compatibleModelsTitle || '🔧 OpenAI Compatible 模型';
+
+    const addCompatibleModelBtn = document.getElementById('addCompatibleModelBtn');
+    if (addCompatibleModelBtn) addCompatibleModelBtn.textContent = llmSection.addModelBtn;
+
+    const compatibleAddModelDesc = document.querySelector('#compatible-models-section .add-model-form small');
+    if (compatibleAddModelDesc) compatibleAddModelDesc.textContent = llmSection.compatibleAddModelDesc || '輸入要支援的 OpenAI Compatible 模型名稱';
+
+    const compatibleCurrentModelsTitle = document.querySelector('#compatible-models-section h6');
+    if (compatibleCurrentModelsTitle) compatibleCurrentModelsTitle.textContent = llmSection.compatibleCurrentModelsTitle || '📝 當前 Compatible 模型：';
+
+    // 更新全局預設模型選擇
+    const globalDefaultModelSelectPlaceholder = document.querySelector('#globalDefaultModelSelect option[value=""]');
+    if (globalDefaultModelSelectPlaceholder) globalDefaultModelSelectPlaceholder.textContent = llmSection.globalDefaultModelSelectPlaceholder || '選擇全局預設模型...';
 
     // 更新按鈕
     const saveLLMSettings = document.getElementById('saveLLMSettings');
@@ -542,7 +561,7 @@ document.addEventListener('DOMContentLoaded', function() {
       { selector: 'label[for="compatibleModel"]', text: llmSection.compatibleModelDesc },
       { selector: 'label[for="compatibleHeaders"]', text: llmSection.compatibleHeadersDesc },
       { selector: 'label[for="compatibleParams"]', text: llmSection.compatibleParamsDesc },
-      { selector: 'label[for="defaultModelSelect"]', text: llmSection.defaultModelSelectDesc }
+      { selector: 'label[for="globalDefaultModelSelect"]', text: llmSection.globalDefaultModelSelectDesc || '選擇訊息增強功能的全局預設模型（跨所有提供商）' }
     ];
 
     descriptionMappings.forEach(mapping => {
@@ -579,19 +598,34 @@ document.addEventListener('DOMContentLoaded', function() {
       badge.textContent = llmSection.defaultBadge || '預設';
     });
 
-    // 更新模型信息文字
-    const modelsCountInfo = document.getElementById('modelsCountInfo');
-    if (modelsCountInfo && llmSection.modelsCountLabel) {
-      const currentCount = modelsCountInfo.textContent.match(/\d+/);
+    // 更新 OpenAI 模型信息文字
+    const openaiModelsCountInfo = document.getElementById('openaiModelsCountInfo');
+    if (openaiModelsCountInfo && llmSection.modelCount) {
+      const currentCount = openaiModelsCountInfo.textContent.match(/\d+/);
       if (currentCount) {
-        modelsCountInfo.textContent = llmSection.modelsCountLabel + currentCount[0];
+        openaiModelsCountInfo.textContent = `${llmSection.modelCount}：${currentCount[0]}`;
       }
     }
 
-    const defaultModelInfo = document.getElementById('defaultModelInfo');
-    if (defaultModelInfo && llmSection.defaultModelLabel) {
-      const currentModel = defaultModelInfo.textContent.split('：')[1] || llmSection.notSet;
-      defaultModelInfo.textContent = llmSection.defaultModelLabel + currentModel;
+    const openaiDefaultModelInfo = document.getElementById('openaiDefaultModelInfo');
+    if (openaiDefaultModelInfo && llmSection.defaultModel) {
+      const currentModel = openaiDefaultModelInfo.textContent.split('：')[1] || llmSection.notSet;
+      openaiDefaultModelInfo.textContent = `${llmSection.defaultModel}：${currentModel}`;
+    }
+
+    // 更新 OpenAI Compatible 模型信息文字
+    const compatibleModelsCountInfo = document.getElementById('compatibleModelsCountInfo');
+    if (compatibleModelsCountInfo && llmSection.modelCount) {
+      const currentCount = compatibleModelsCountInfo.textContent.match(/\d+/);
+      if (currentCount) {
+        compatibleModelsCountInfo.textContent = `${llmSection.modelCount}：${currentCount[0]}`;
+      }
+    }
+
+    const compatibleDefaultModelInfo = document.getElementById('compatibleDefaultModelInfo');
+    if (compatibleDefaultModelInfo && llmSection.defaultModel) {
+      const currentModel = compatibleDefaultModelInfo.textContent.split('：')[1] || llmSection.notSet;
+      compatibleDefaultModelInfo.textContent = `${llmSection.defaultModel}：${currentModel}`;
     }
 
     // 更新 "添加於" 文字
@@ -1435,17 +1469,28 @@ document.addEventListener('DOMContentLoaded', function() {
     const openaiConfig = document.getElementById('openai-config');
     const openaiCompatibleConfig = document.getElementById('openai-compatible-config');
     const userModelsSection = document.getElementById('user-models-section');
+    const openaiModelsSection = document.getElementById('openai-models-section');
+    const compatibleModelsSection = document.getElementById('compatible-models-section');
     const llmActions = document.getElementById('llm-actions');
     const saveLLMSettings = document.getElementById('saveLLMSettings');
     const resetLLMSettings = document.getElementById('resetLLMSettings');
 
-    // 模型管理相關元素
-    const newModelName = document.getElementById('newModelName');
-    const addModelBtn = document.getElementById('addModelBtn');
-    const currentModelsList = document.getElementById('currentModelsList');
-    const modelsCountInfo = document.getElementById('modelsCountInfo');
-    const defaultModelInfo = document.getElementById('defaultModelInfo');
-    const defaultModelSelect = document.getElementById('defaultModelSelect');
+    // OpenAI 模型管理相關元素
+    const newOpenaiModelName = document.getElementById('newOpenaiModelName');
+    const addOpenaiModelBtn = document.getElementById('addOpenaiModelBtn');
+    const openaiModelsList = document.getElementById('openaiModelsList');
+    const openaiModelsCountInfo = document.getElementById('openaiModelsCountInfo');
+    const openaiDefaultModelInfo = document.getElementById('openaiDefaultModelInfo');
+
+    // OpenAI Compatible 模型管理相關元素
+    const newCompatibleModelName = document.getElementById('newCompatibleModelName');
+    const addCompatibleModelBtn = document.getElementById('addCompatibleModelBtn');
+    const compatibleModelsList = document.getElementById('compatibleModelsList');
+    const compatibleModelsCountInfo = document.getElementById('compatibleModelsCountInfo');
+    const compatibleDefaultModelInfo = document.getElementById('compatibleDefaultModelInfo');
+
+    // 全局預設模型選擇
+    const globalDefaultModelSelect = document.getElementById('globalDefaultModelSelect');
 
     // 提供商選擇變更事件
     if (llmProviderSelect) {
@@ -1456,39 +1501,64 @@ document.addEventListener('DOMContentLoaded', function() {
         if (openaiConfig) openaiConfig.style.display = 'none';
         if (openaiCompatibleConfig) openaiCompatibleConfig.style.display = 'none';
         if (userModelsSection) userModelsSection.style.display = 'none';
+        if (openaiModelsSection) openaiModelsSection.style.display = 'none';
+        if (compatibleModelsSection) compatibleModelsSection.style.display = 'none';
         if (llmActions) llmActions.style.display = 'none';
         
         // 根據選擇顯示對應的配置區域
         if (selectedProvider === 'openai') {
           if (openaiConfig) openaiConfig.style.display = 'block';
           if (userModelsSection) userModelsSection.style.display = 'block';
+          if (openaiModelsSection) openaiModelsSection.style.display = 'block';
           if (llmActions) llmActions.style.display = 'block';
+          loadProviderModels('openai');
         } else if (selectedProvider === 'openai-compatible') {
           if (openaiCompatibleConfig) openaiCompatibleConfig.style.display = 'block';
           if (userModelsSection) userModelsSection.style.display = 'block';
+          if (compatibleModelsSection) compatibleModelsSection.style.display = 'block';
           if (llmActions) llmActions.style.display = 'block';
+          loadProviderModels('openai-compatible');
         }
         
-        // 載入對應的模型列表
-        if (selectedProvider) {
-          loadUserModels();
-        }
+        // 載入全局預設模型選項
+        loadGlobalDefaultModelOptions();
       });
     }
 
-    // 添加模型按鈕事件
-    if (addModelBtn) {
-      addModelBtn.addEventListener('click', function() {
-        addNewModel();
+    // OpenAI 模型管理事件
+    if (addOpenaiModelBtn) {
+      addOpenaiModelBtn.addEventListener('click', function() {
+        addNewModel('openai');
       });
     }
 
-    // 模型名稱輸入框回車事件
-    if (newModelName) {
-      newModelName.addEventListener('keypress', function(e) {
+    if (newOpenaiModelName) {
+      newOpenaiModelName.addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
-          addNewModel();
+          addNewModel('openai');
         }
+      });
+    }
+
+    // OpenAI Compatible 模型管理事件
+    if (addCompatibleModelBtn) {
+      addCompatibleModelBtn.addEventListener('click', function() {
+        addNewModel('openai-compatible');
+      });
+    }
+
+    if (newCompatibleModelName) {
+      newCompatibleModelName.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          addNewModel('openai-compatible');
+        }
+      });
+    }
+
+    // 全局預設模型選擇事件
+    if (globalDefaultModelSelect) {
+      globalDefaultModelSelect.addEventListener('change', function() {
+        handleGlobalDefaultModelChange();
       });
     }
 
@@ -1510,8 +1580,10 @@ document.addEventListener('DOMContentLoaded', function() {
     loadLLMSettingsHandler();
 
     // 模型管理相關函數
-    function addNewModel() {
-      const modelName = newModelName?.value?.trim();
+    function addNewModel(provider) {
+      const inputElement = provider === 'openai' ? newOpenaiModelName : newCompatibleModelName;
+      const modelName = inputElement?.value?.trim();
+      
       if (!modelName) {
         const translations = currentTranslations?.llm || {};
         showLLMActionStatus(translations.modelNameRequired || '請輸入模型名稱', 'error');
@@ -1519,10 +1591,11 @@ document.addEventListener('DOMContentLoaded', function() {
       }
 
       // 檢查模型是否已存在
-      chrome.storage.local.get(['userModels'], function(result) {
-        const userModels = result.userModels || [];
+      chrome.storage.local.get(['providerModels'], function(result) {
+        const providerModels = result.providerModels || {};
+        const currentProviderModels = providerModels[provider] || [];
         
-        if (userModels.some(model => model.name === modelName)) {
+        if (currentProviderModels.some(model => model.name === modelName)) {
           const translations = currentTranslations?.llm || {};
           showLLMActionStatus(translations.modelAlreadyExists || '模型已存在', 'error');
           return;
@@ -1531,43 +1604,49 @@ document.addEventListener('DOMContentLoaded', function() {
         // 添加新模型
         const newModel = {
           name: modelName,
+          provider: provider,
           addedAt: new Date().toISOString(),
-          isDefault: userModels.length === 0 // 第一個模型設為預設
+          isDefault: currentProviderModels.length === 0 // 該提供商的第一個模型設為預設
         };
 
-        userModels.push(newModel);
+        currentProviderModels.push(newModel);
+        providerModels[provider] = currentProviderModels;
 
         // 保存到 storage
-        chrome.storage.local.set({ userModels: userModels }, function() {
+        chrome.storage.local.set({ providerModels: providerModels }, function() {
           if (chrome.runtime.lastError) {
             const translations = currentTranslations?.llm || {};
             showLLMActionStatus(translations.addModelFailed || '添加模型失敗', 'error');
           } else {
             const translations = currentTranslations?.llm || {};
-            showLLMActionStatus(translations.modelAdded || `✅ 模型 "${modelName}" 已添加`, 'success');
-            newModelName.value = '';
-            loadUserModels();
+            const providerName = provider === 'openai' ? 'OpenAI' : 'OpenAI Compatible';
+            showLLMActionStatus(translations.modelAdded || `✅ ${providerName} 模型 "${modelName}" 已添加`, 'success');
+            inputElement.value = '';
+            loadProviderModels(provider);
+            loadGlobalDefaultModelOptions();
           }
         });
       });
     }
 
-    function loadUserModels() {
-      chrome.storage.local.get(['userModels'], function(result) {
-        const userModels = result.userModels || [];
-        displayUserModels(userModels);
-        updateModelsInfo(userModels);
-        updateDefaultModelSelect(userModels);
+    function loadProviderModels(provider) {
+      chrome.storage.local.get(['providerModels'], function(result) {
+        const providerModels = result.providerModels || {};
+        const models = providerModels[provider] || [];
+        displayProviderModels(provider, models);
+        updateProviderModelsInfo(provider, models);
       });
     }
 
-    function displayUserModels(models) {
-      if (!currentModelsList) return;
+    function displayProviderModels(provider, models) {
+      const listElement = provider === 'openai' ? openaiModelsList : compatibleModelsList;
+      if (!listElement) return;
 
       const translations = currentTranslations?.llm || {};
 
       if (models.length === 0) {
-        currentModelsList.innerHTML = `<div class="models-placeholder">${translations.noModelsAdded || '尚未添加任何模型'}</div>`;
+        const providerName = provider === 'openai' ? 'OpenAI' : 'OpenAI Compatible';
+        listElement.innerHTML = `<div class="models-placeholder">${translations.noModelsAdded || `尚未添加任何 ${providerName} 模型`}</div>`;
         return;
       }
 
@@ -1576,7 +1655,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const addedDate = new Date(model.addedAt).toLocaleDateString();
         
         return `
-          <div class="model-list-item ${isDefault ? 'default-model' : ''}" data-model-name="${model.name}">
+          <div class="model-list-item ${isDefault ? 'default-model' : ''}" data-model-name="${model.name}" data-provider="${provider}">
             <div class="model-item-info">
               <div class="model-item-name">${model.name}</div>
               <div class="model-item-meta">
@@ -1585,134 +1664,173 @@ document.addEventListener('DOMContentLoaded', function() {
               </div>
             </div>
             <div class="model-item-actions">
-              ${!isDefault ? `<button class="btn-set-default" data-model-name="${model.name}">${translations.setDefaultBtn || '設為預設'}</button>` : ''}
-              <button class="btn-remove-model" data-model-name="${model.name}">${translations.removeBtn || '移除'}</button>
+              ${!isDefault ? `<button class="btn-set-default" data-model-name="${model.name}" data-provider="${provider}">${translations.setDefaultBtn || '設為預設'}</button>` : ''}
+              <button class="btn-remove-model" data-model-name="${model.name}" data-provider="${provider}">${translations.removeBtn || '移除'}</button>
             </div>
           </div>
         `;
       }).join('');
 
-      currentModelsList.innerHTML = modelsHtml;
+      listElement.innerHTML = modelsHtml;
 
       // 添加事件監聽器
-      currentModelsList.querySelectorAll('.btn-set-default').forEach(btn => {
+      listElement.querySelectorAll('.btn-set-default').forEach(btn => {
         btn.addEventListener('click', function() {
           const modelName = this.getAttribute('data-model-name');
-          setDefaultModel(modelName);
+          const modelProvider = this.getAttribute('data-provider');
+          setProviderDefaultModel(modelProvider, modelName);
         });
       });
 
-      currentModelsList.querySelectorAll('.btn-remove-model').forEach(btn => {
+      listElement.querySelectorAll('.btn-remove-model').forEach(btn => {
         btn.addEventListener('click', function() {
           const modelName = this.getAttribute('data-model-name');
-          removeModel(modelName);
+          const modelProvider = this.getAttribute('data-provider');
+          removeProviderModel(modelProvider, modelName);
         });
       });
     }
 
-    function setDefaultModel(modelName) {
-      chrome.storage.local.get(['userModels'], function(result) {
-        const userModels = result.userModels || [];
+    function setProviderDefaultModel(provider, modelName) {
+      chrome.storage.local.get(['providerModels'], function(result) {
+        const providerModels = result.providerModels || {};
+        const models = providerModels[provider] || [];
         
-        // 清除所有預設標記
-        userModels.forEach(model => {
+        // 清除該提供商所有預設標記
+        models.forEach(model => {
           model.isDefault = false;
         });
         
         // 設置新的預設模型
-        const targetModel = userModels.find(model => model.name === modelName);
+        const targetModel = models.find(model => model.name === modelName);
         if (targetModel) {
           targetModel.isDefault = true;
         }
 
-        chrome.storage.local.set({ userModels: userModels }, function() {
+        providerModels[provider] = models;
+
+        chrome.storage.local.set({ providerModels: providerModels }, function() {
           if (chrome.runtime.lastError) {
             const translations = currentTranslations?.llm || {};
             showLLMActionStatus(translations.setDefaultFailed || '設置預設模型失敗', 'error');
           } else {
             const translations = currentTranslations?.llm || {};
-            showLLMActionStatus(translations.defaultModelSet || `✅ "${modelName}" 已設為預設模型`, 'success');
-            loadUserModels();
+            const providerName = provider === 'openai' ? 'OpenAI' : 'OpenAI Compatible';
+            showLLMActionStatus(translations.defaultModelSet || `✅ ${providerName} 預設模型已設為 "${modelName}"`, 'success');
+            loadProviderModels(provider);
+            loadGlobalDefaultModelOptions();
           }
         });
       });
     }
 
-    function removeModel(modelName) {
+    function removeProviderModel(provider, modelName) {
       const translations = currentTranslations?.llm || {};
-      const confirmMessage = translations.confirmRemoveModel || `確定要移除模型 "${modelName}" 嗎？`;
+      const providerName = provider === 'openai' ? 'OpenAI' : 'OpenAI Compatible';
       
-      if (!confirm(confirmMessage)) {
-        return;
-      }
+      if (confirm(translations.confirmRemoveModel || `確定要移除 ${providerName} 模型 "${modelName}" 嗎？`)) {
+        chrome.storage.local.get(['providerModels'], function(result) {
+          const providerModels = result.providerModels || {};
+          const models = providerModels[provider] || [];
+          
+          const modelIndex = models.findIndex(model => model.name === modelName);
+          if (modelIndex > -1) {
+            const removedModel = models[modelIndex];
+            models.splice(modelIndex, 1);
+            
+            // 如果移除的是預設模型，設置第一個模型為預設
+            if (removedModel.isDefault && models.length > 0) {
+              models[0].isDefault = true;
+            }
+            
+            providerModels[provider] = models;
 
-      chrome.storage.local.get(['userModels'], function(result) {
-        let userModels = result.userModels || [];
-        const removedModel = userModels.find(model => model.name === modelName);
-        
-        // 移除模型
-        userModels = userModels.filter(model => model.name !== modelName);
-        
-        // 如果移除的是預設模型，設置第一個模型為預設
-        if (removedModel?.isDefault && userModels.length > 0) {
-          userModels[0].isDefault = true;
-        }
-
-        chrome.storage.local.set({ userModels: userModels }, function() {
-          if (chrome.runtime.lastError) {
-            const translations = currentTranslations?.llm || {};
-            showLLMActionStatus(translations.removeModelFailed || '移除模型失敗', 'error');
-          } else {
-            const translations = currentTranslations?.llm || {};
-            showLLMActionStatus(translations.modelRemoved || `✅ 模型 "${modelName}" 已移除`, 'success');
-            loadUserModels();
+            chrome.storage.local.set({ providerModels: providerModels }, function() {
+              if (chrome.runtime.lastError) {
+                const translations = currentTranslations?.llm || {};
+                showLLMActionStatus(translations.removeModelFailed || '移除模型失敗', 'error');
+              } else {
+                const translations = currentTranslations?.llm || {};
+                showLLMActionStatus(translations.modelRemoved || `✅ ${providerName} 模型 "${modelName}" 已移除`, 'success');
+                loadProviderModels(provider);
+                loadGlobalDefaultModelOptions();
+              }
+            });
           }
         });
-      });
+      }
     }
 
-    function updateModelsInfo(models) {
-      const translations = currentTranslations?.llm || {};
+    function updateProviderModelsInfo(provider, models) {
+      const countElement = provider === 'openai' ? openaiModelsCountInfo : compatibleModelsCountInfo;
+      const defaultElement = provider === 'openai' ? openaiDefaultModelInfo : compatibleDefaultModelInfo;
       
-      if (modelsCountInfo) {
-        modelsCountInfo.textContent = `${translations.modelsCountLabel || '模型數量：'}${models.length}`;
+      if (countElement) {
+        const translations = currentTranslations?.llm || {};
+        countElement.textContent = `${translations.modelCount || '模型數量'}：${models.length}`;
       }
       
-      if (defaultModelInfo) {
+      if (defaultElement) {
         const defaultModel = models.find(model => model.isDefault);
-        defaultModelInfo.textContent = `${translations.defaultModelLabel || '預設模型：'}${defaultModel ? defaultModel.name : (translations.notSet || '未設定')}`;
+        const translations = currentTranslations?.llm || {};
+        defaultElement.textContent = `${translations.defaultModel || '預設模型'}：${defaultModel ? defaultModel.name : translations.notSet || '未設定'}`;
       }
     }
 
-    function updateDefaultModelSelect(models) {
-      if (!defaultModelSelect) return;
+    function loadGlobalDefaultModelOptions() {
+      if (!globalDefaultModelSelect) return;
 
-      const translations = currentTranslations?.llm || {};
-
-      // 清空選項
-      defaultModelSelect.innerHTML = `<option value="">${translations.defaultModelSelectPlaceholder || '選擇預設模型...'}</option>`;
-      
-      // 添加模型選項
-      models.forEach(model => {
-        const option = document.createElement('option');
-        option.value = model.name;
-        option.textContent = model.name;
-        if (model.isDefault) {
-          option.selected = true;
-        }
-        defaultModelSelect.appendChild(option);
+      chrome.storage.local.get(['providerModels', 'globalDefaultModel'], function(result) {
+        const providerModels = result.providerModels || {};
+        const globalDefaultModel = result.globalDefaultModel || '';
+        
+        // 清空選項
+        globalDefaultModelSelect.innerHTML = '<option value="">選擇全局預設模型...</option>';
+        
+        // 添加所有提供商的模型
+        Object.keys(providerModels).forEach(provider => {
+          const models = providerModels[provider] || [];
+          const providerName = provider === 'openai' ? 'OpenAI' : 'OpenAI Compatible';
+          
+          if (models.length > 0) {
+            // 添加提供商分組標題
+            const optgroup = document.createElement('optgroup');
+            optgroup.label = providerName;
+            
+            models.forEach(model => {
+              const option = document.createElement('option');
+              option.value = `${provider}:${model.name}`;
+              option.textContent = model.name;
+              if (globalDefaultModel === `${provider}:${model.name}`) {
+                option.selected = true;
+              }
+              optgroup.appendChild(option);
+            });
+            
+            globalDefaultModelSelect.appendChild(optgroup);
+          }
+        });
       });
-
-      // 添加變更事件監聽器
-      defaultModelSelect.removeEventListener('change', handleDefaultModelChange);
-      defaultModelSelect.addEventListener('change', handleDefaultModelChange);
     }
 
-    function handleDefaultModelChange() {
-      const selectedModel = defaultModelSelect.value;
-      if (selectedModel) {
-        setDefaultModel(selectedModel);
-      }
+    function handleGlobalDefaultModelChange() {
+      const selectedValue = globalDefaultModelSelect.value;
+      
+      chrome.storage.local.set({ globalDefaultModel: selectedValue }, function() {
+        if (chrome.runtime.lastError) {
+          const translations = currentTranslations?.llm || {};
+          showLLMActionStatus(translations.setGlobalDefaultFailed || '設置全局預設模型失敗', 'error');
+        } else {
+          const translations = currentTranslations?.llm || {};
+          if (selectedValue) {
+            const [provider, modelName] = selectedValue.split(':');
+            const providerName = provider === 'openai' ? 'OpenAI' : 'OpenAI Compatible';
+            showLLMActionStatus(translations.globalDefaultSet || `✅ 全局預設模型已設為 ${providerName} 的 "${modelName}"`, 'success');
+          } else {
+            showLLMActionStatus(translations.globalDefaultCleared || '✅ 全局預設模型已清除', 'success');
+          }
+        }
+      });
     }
   }
 
@@ -1829,7 +1947,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (llmActions) llmActions.style.display = 'none';
     
     // 清除保存的設定（包括用戶模型）
-    chrome.storage.local.remove(['llmSettings', 'userModels'], function() {
+    chrome.storage.local.remove(['llmSettings', 'providerModels', 'globalDefaultModel'], function() {
       const translations = currentTranslations?.llm || {};
       showLLMActionStatus(translations.resetSuccess || '🔄 LLM 設定已重置', 'info');
     });

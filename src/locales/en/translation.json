@@ -177,6 +177,12 @@
     "confirmRemoveModel": "Are you sure you want to remove this model?",
     "removeModelFailed": "Failed to remove model",
     "modelRemoved": "Model removed",
+    "modelCount": "Model Count",
+    "defaultModel": "Default Model",
+    "notSet": "Not Set",
+    "setGlobalDefaultFailed": "Failed to set global default model",
+    "globalDefaultSet": "Global default model set",
+    "globalDefaultCleared": "Global default model cleared",
 
     "save": "💾 Save Settings",
     "reset": "🔄 Reset Settings",

@@ -254,37 +254,70 @@
             管理您要支援的模型列表。這些模型將在訊息增強功能中可供選擇。
           </div>
           
-          <!-- 添加新模型 -->
-          <div class="add-model-container">
-            <div class="add-model-form">
-              <div class="model-input-group">
-                <input type="text" id="newModelName" placeholder="輸入模型名稱（例如：gpt-4, claude-3-sonnet）" class="model-input">
-                <button id="addModelBtn" class="btn-add-model">➕ 添加模型</button>
+          <!-- OpenAI 模型管理 -->
+          <div class="provider-models-section" id="openai-models-section" style="display: none;">
+            <h5>🤖 OpenAI 模型</h5>
+            
+            <!-- 添加新模型 -->
+            <div class="add-model-container">
+              <div class="add-model-form">
+                <div class="model-input-group">
+                  <input type="text" id="newOpenaiModelName" placeholder="輸入 OpenAI 模型名稱（例如：gpt-4, gpt-3.5-turbo）" class="model-input">
+                  <button id="addOpenaiModelBtn" class="btn-add-model">➕ 添加模型</button>
+                </div>
+                <small>輸入要支援的 OpenAI 模型名稱</small>
               </div>
-              <small>輸入要支援的模型名稱，支援 OpenAI 和其他相容 API 的模型</small>
+            </div>
+
+            <!-- 當前模型列表 -->
+            <div class="current-models-container">
+              <h6>📝 當前 OpenAI 模型：</h6>
+              <div id="openaiModelsList" class="models-list">
+                <div class="models-placeholder">載入中...</div>
+              </div>
+              <div class="models-info">
+                <span id="openaiModelsCountInfo">模型數量：0</span>
+                <span id="openaiDefaultModelInfo">預設模型：未設定</span>
+              </div>
             </div>
           </div>
 
-          <!-- 當前模型列表 -->
-          <div class="current-models-container">
-            <h5>📝 當前支援的模型：</h5>
-            <div id="currentModelsList" class="models-list">
-              <div class="models-placeholder">載入中...</div>
+          <!-- OpenAI Compatible 模型管理 -->
+          <div class="provider-models-section" id="compatible-models-section" style="display: none;">
+            <h5>🔧 OpenAI Compatible 模型</h5>
+            
+            <!-- 添加新模型 -->
+            <div class="add-model-container">
+              <div class="add-model-form">
+                <div class="model-input-group">
+                  <input type="text" id="newCompatibleModelName" placeholder="輸入 Compatible 模型名稱（例如：claude-3-sonnet, llama-2）" class="model-input">
+                  <button id="addCompatibleModelBtn" class="btn-add-model">➕ 添加模型</button>
+                </div>
+                <small>輸入要支援的 OpenAI Compatible 模型名稱</small>
+              </div>
             </div>
-            <div class="models-info">
-              <span id="modelsCountInfo">模型數量：0</span>
-              <span id="defaultModelInfo">預設模型：未設定</span>
+
+            <!-- 當前模型列表 -->
+            <div class="current-models-container">
+              <h6>📝 當前 Compatible 模型：</h6>
+              <div id="compatibleModelsList" class="models-list">
+                <div class="models-placeholder">載入中...</div>
+              </div>
+              <div class="models-info">
+                <span id="compatibleModelsCountInfo">模型數量：0</span>
+                <span id="compatibleDefaultModelInfo">預設模型：未設定</span>
+              </div>
             </div>
           </div>
 
-          <!-- 預設模型選擇 -->
+          <!-- 全局預設模型選擇 -->
           <div class="default-model-container">
             <div class="setting-row">
-              <label for="defaultModelSelect">預設模型</label>
-              <select id="defaultModelSelect" class="default-model-dropdown">
-                <option value="">選擇預設模型...</option>
+              <label for="globalDefaultModelSelect">全局預設模型</label>
+              <select id="globalDefaultModelSelect" class="default-model-dropdown">
+                <option value="">選擇全局預設模型...</option>
               </select>
-              <small>選擇訊息增強功能的預設模型</small>
+              <small>選擇訊息增強功能的全局預設模型（跨所有提供商）</small>
             </div>
           </div>
         </div>

@@ -1344,19 +1344,53 @@ h4 {
   }
 }
 
-/* 用戶指定模型管理樣式 */
+/* 用戶模型管理樣式 */
 #user-models-section {
-  border-top: 1px solid #e9ecef;
-  padding-top: 16px;
   margin-top: 16px;
-}
-
-.add-model-container {
+  padding: 16px;
   background: #f8f9fa;
   border-radius: 8px;
-  padding: 12px;
-  margin-bottom: 16px;
   border: 1px solid #e9ecef;
+}
+
+#user-models-section h4 {
+  margin: 0 0 8px 0;
+  color: #333;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+/* 提供商模型區域樣式 */
+.provider-models-section {
+  margin: 16px 0;
+  padding: 16px;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.provider-models-section h5 {
+  margin: 0 0 12px 0;
+  color: #495057;
+  font-size: 15px;
+  font-weight: 600;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #e9ecef;
+}
+
+.provider-models-section h6 {
+  margin: 16px 0 8px 0;
+  color: #6c757d;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* 添加模型容器 */
+.add-model-container {
+  margin-bottom: 20px;
 }
 
 .add-model-form {
@@ -1373,36 +1407,31 @@ h4 {
 
 .model-input {
   flex: 1;
-  padding: 8px 12px;
+  padding: 10px 12px;
   border: 2px solid #e9ecef;
   border-radius: 6px;
-  font-size: 13px;
+  font-size: 14px;
   transition: all 0.2s ease;
   background: white;
 }
 
-.model-input:hover {
-  border-color: #4A154B;
-}
-
 .model-input:focus {
   outline: none;
-  border-color: #4A154B;
-  box-shadow: 0 0 0 2px rgba(74, 21, 75, 0.1);
+  border-color: #007a5a;
+  box-shadow: 0 0 0 3px rgba(0, 122, 90, 0.1);
 }
 
-.model-input::placeholder {
-  color: #999;
-  font-style: italic;
+.model-input:hover {
+  border-color: #adb5bd;
 }
 
 .btn-add-model {
-  background: #28a745;
+  padding: 10px 16px;
+  background: #007a5a;
   color: white;
   border: none;
   border-radius: 6px;
-  padding: 8px 16px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -1410,7 +1439,7 @@ h4 {
 }
 
 .btn-add-model:hover {
-  background: #218838;
+  background: #005a3a;
   transform: translateY(-1px);
 }
 
@@ -1418,48 +1447,32 @@ h4 {
   transform: translateY(0);
 }
 
-.btn-add-model:disabled {
-  background: #6c757d;
-  cursor: not-allowed;
-  transform: none;
-}
-
+/* 當前模型容器 */
 .current-models-container {
-  margin-bottom: 16px;
-}
-
-.current-models-container h5 {
-  margin: 0 0 8px 0;
-  font-size: 13px;
-  font-weight: 600;
-  color: #4A154B;
+  margin-top: 16px;
 }
 
 .models-list {
-  background: white;
-  border: 1px solid #e9ecef;
-  border-radius: 8px;
-  max-height: 200px;
+  max-height: 300px;
   overflow-y: auto;
-  margin-bottom: 8px;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  background: white;
 }
 
-.models-list:empty::before {
-  content: "尚未添加任何模型";
-  display: block;
-  padding: 16px;
+.models-placeholder {
+  padding: 20px;
   text-align: center;
-  color: #999;
+  color: #6c757d;
   font-style: italic;
-  font-size: 13px;
 }
 
 .model-list-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 12px;
-  border-bottom: 1px solid #f0f0f0;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f1f3f4;
   transition: background-color 0.2s ease;
 }
 
@@ -1473,120 +1486,104 @@ h4 {
 
 .model-list-item.default-model {
   background: #e8f5e8;
-  border-left: 3px solid #28a745;
-}
-
-.model-list-item.default-model:hover {
-  background: #d4edda;
+  border-left: 4px solid #28a745;
 }
 
 .model-item-info {
-  display: flex;
-  flex-direction: column;
   flex: 1;
 }
 
 .model-item-name {
-  font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   color: #333;
-  margin-bottom: 2px;
+  font-size: 14px;
+  margin-bottom: 4px;
 }
 
 .model-item-meta {
-  font-size: 11px;
-  color: #666;
   display: flex;
-  gap: 8px;
-  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  color: #6c757d;
 }
 
 .model-default-badge {
   background: #28a745;
   color: white;
-  font-size: 10px;
   padding: 2px 6px;
-  border-radius: 10px;
+  border-radius: 3px;
   font-weight: 500;
+  font-size: 11px;
 }
 
 .model-item-actions {
   display: flex;
-  gap: 4px;
-  align-items: center;
+  gap: 8px;
 }
 
-.btn-set-default {
-  background: #007bff;
-  color: white;
+.btn-set-default,
+.btn-remove-model {
+  padding: 6px 12px;
   border: none;
   border-radius: 4px;
-  padding: 4px 8px;
-  font-size: 11px;
+  font-size: 12px;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
+.btn-set-default {
+  background: #17a2b8;
+  color: white;
+}
+
 .btn-set-default:hover {
-  background: #0056b3;
+  background: #138496;
 }
 
 .btn-remove-model {
   background: #dc3545;
   color: white;
-  border: none;
-  border-radius: 4px;
-  padding: 4px 8px;
-  font-size: 11px;
-  cursor: pointer;
-  transition: all 0.2s ease;
 }
 
 .btn-remove-model:hover {
   background: #c82333;
 }
 
+/* 模型信息 */
 .models-info {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  font-size: 12px;
-  color: #666;
-  padding: 4px 0;
-}
-
-.models-info span {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.default-model-container {
+  margin-top: 8px;
+  padding: 8px 12px;
   background: #f8f9fa;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #6c757d;
+}
+
+/* 全局預設模型選擇 */
+.default-model-container {
+  margin-top: 20px;
+  padding: 16px;
+  background: #fff3cd;
+  border: 1px solid #ffeaa7;
   border-radius: 8px;
-  padding: 12px;
-  border: 1px solid #e9ecef;
 }
 
 .default-model-dropdown {
   width: 100%;
   padding: 8px 12px;
-  border: 2px solid #e9ecef;
-  border-radius: 6px;
-  font-size: 13px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 14px;
   background: white;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.default-model-dropdown:hover {
-  border-color: #4A154B;
 }
 
 .default-model-dropdown:focus {
   outline: none;
-  border-color: #4A154B;
-  box-shadow: 0 0 0 2px rgba(74, 21, 75, 0.1);
+  border-color: #007a5a;
+  box-shadow: 0 0 0 2px rgba(0, 122, 90, 0.2);
 }
 
 /* 響應式設計 */
@@ -1596,11 +1593,7 @@ h4 {
   }
   
   .model-input {
-    width: 100%;
-  }
-  
-  .btn-add-model {
-    width: 100%;
+    margin-bottom: 8px;
   }
   
   .model-list-item {
@@ -1610,13 +1603,11 @@ h4 {
   }
   
   .model-item-actions {
-    width: 100%;
-    justify-content: flex-end;
+    align-self: flex-end;
   }
   
   .models-info {
     flex-direction: column;
-    align-items: flex-start;
     gap: 4px;
   }
 } 
