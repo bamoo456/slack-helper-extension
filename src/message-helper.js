@@ -787,7 +787,7 @@ export class MessageHelper {
    * Preserves line breaks and emojis
    */
   extractFormattedText(element) {
-    // For Slack's Quill editor, we need to handle the specific structure
+    // For Slack's Quill editor, we need to handle the specific structure and convert to Markdown
     const html = element.innerHTML;
     
     // Create a temporary element to parse the HTML
@@ -850,6 +850,46 @@ export class MessageHelper {
             // Skip standalone <br> in paragraphs - they're handled by paragraph logic
             return '';
             
+          case 'ts-mention':
+            // Handle Slack mentions - convert to @username format
+            const mentionLabel = node.getAttribute('data-label');
+            if (mentionLabel) {
+              return mentionLabel; // This already includes the @ symbol
+            }
+            // Fallback to text content
+            return node.textContent || '';
+            
+          case 'code':
+            // Handle inline code - convert to markdown backticks
+            const codeContent = node.textContent || '';
+            return '`' + codeContent + '`';
+            
+          case 'a':
+            // Handle hyperlinks - convert to markdown link format
+            const linkText = node.textContent || '';
+            const linkHref = node.getAttribute('href') || '';
+            if (linkHref && linkText) {
+              return `[${linkText}](${linkHref})`;
+            }
+            // If no href or text, just return the text content
+            return linkText;
+            
+          case 'div':
+            // Handle code blocks
+            const className = node.className || '';
+            if (className.includes('ql-code-block')) {
+              const codeBlockContent = node.textContent || '';
+              // Add proper line breaks for code blocks
+              return '\n```\n' + codeBlockContent + '\n```\n';
+            }
+            
+            // Regular div, process children
+            let divContent = '';
+            for (const child of node.childNodes) {
+              divContent += processNode(child);
+            }
+            return divContent;
+            
           case 'img':
             // Handle emoji images - prioritize data-stringify-text
             const stringifyText = node.getAttribute('data-stringify-text');
@@ -869,8 +909,8 @@ export class MessageHelper {
             }
             
             // Check for emoji class or other indicators
-            const className = node.className || '';
-            if (className.includes('emoji') || className.includes('emoticon')) {
+            const spanClassName = node.className || '';
+            if (spanClassName.includes('emoji') || spanClassName.includes('emoticon')) {
               const spanStringify = node.getAttribute('data-stringify-text');
               const spanText = spanStringify || node.textContent || node.getAttribute('title') || node.getAttribute('aria-label') || '';
               return spanText;
@@ -906,7 +946,7 @@ export class MessageHelper {
       .replace(/^\n+/, '') // Remove leading line breaks
       .replace(/\n+$/, ''); // Remove trailing line breaks
     
-    console.log('Message Helper: Extracted formatted text:', JSON.stringify(text));
+    console.log('Message Helper: Extracted formatted text with Markdown:', JSON.stringify(text));
     
     // If we didn't get good results, fall back to simpler method
     if (!text || text.length < 3) {
