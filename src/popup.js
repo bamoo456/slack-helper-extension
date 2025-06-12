@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const systemPromptInput = document.getElementById('systemPromptInput');
   const savePromptBtn = document.getElementById('savePromptBtn');
   const resetPromptBtn = document.getElementById('resetPromptBtn');
-  const loadCurrentBtn = document.getElementById('loadCurrentBtn');
+
   const promptActionStatus = document.getElementById('promptActionStatus');
   const currentPromptDisplay = document.getElementById('currentPromptDisplay');
   const promptLength = document.getElementById('promptLength');
@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // 滾動設定相關元素
   const saveScrollSettings = document.getElementById('saveScrollSettings');
   const resetScrollSettings = document.getElementById('resetScrollSettings');
-  const loadScrollSettings = document.getElementById('loadScrollSettings');
+
   const scrollActionStatus = document.getElementById('scrollActionStatus');
 
   // 同步設定相關元素
@@ -303,7 +303,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // 更新按鈕
     if (savePromptBtn) savePromptBtn.textContent = promptSection.save;
     if (resetPromptBtn) resetPromptBtn.textContent = promptSection.reset;
-    if (loadCurrentBtn) loadCurrentBtn.textContent = promptSection.loadCurrent;
+    
 
     // 更新標籤和佔位符
     const promptLabel = document.querySelector('label[for="systemPromptInput"]');
@@ -370,11 +370,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // 更新按鈕
     const saveScrollBtn = document.getElementById('saveScrollSettings');
     const resetScrollBtn = document.getElementById('resetScrollSettings');
-    const loadScrollBtn = document.getElementById('loadScrollSettings');
-
     if (saveScrollBtn) saveScrollBtn.textContent = scrollSection.save;
     if (resetScrollBtn) resetScrollBtn.textContent = scrollSection.reset;
-    if (loadScrollBtn) loadScrollBtn.textContent = scrollSection.loadCurrent;
   }
 
   // 更新同步設定區域文字
@@ -522,8 +519,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const resetLLMSettings = document.getElementById('resetLLMSettings');
     if (resetLLMSettings) resetLLMSettings.textContent = llmSection.reset;
 
-    const loadLLMSettings = document.getElementById('loadLLMSettings');
-    if (loadLLMSettings) loadLLMSettings.textContent = llmSection.loadCurrent;
+
 
     // 更新所有描述文字 - 使用更精確的方法
     const descriptionMappings = [
@@ -681,21 +677,7 @@ document.addEventListener('DOMContentLoaded', function() {
       });
     });
 
-    // 載入當前設定按鈕
-    loadCurrentBtn.addEventListener('click', function() {
-      chrome.storage.local.get(['customSystemPrompt'], function(result) {
-        const customPrompt = result.customSystemPrompt || '';
-        const translations = currentTranslations?.prompt || {};
-        
-        if (customPrompt.trim()) {
-          systemPromptInput.value = customPrompt;
-          showPromptActionStatus(translations.loadCurrentSuccess || '📥 已載入當前保存的設定', 'info');
-        } else {
-          systemPromptInput.value = '';
-          showPromptActionStatus(translations.loadDefaultSuccess || '📥 當前使用預設設定（已清空編輯區域）', 'info');
-        }
-      });
-    });
+
 
     // 監聽輸入區域變化，提供即時字數統計
     systemPromptInput.addEventListener('input', function() {
@@ -926,13 +908,7 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
 
-    // 載入當前滾動設定
-    loadScrollSettings.addEventListener('click', function() {
-      loadCurrentScrollSettings();
-      const translations = currentTranslations?.scroll || {};
-      const loadMessage = translations.loaded || '📥 已載入當前設定';
-      showScrollActionStatus(loadMessage, 'info');
-    });
+
   }
 
   // 收集滾動設定
@@ -1401,7 +1377,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const llmActions = document.getElementById('llm-actions');
     const saveLLMSettings = document.getElementById('saveLLMSettings');
     const resetLLMSettings = document.getElementById('resetLLMSettings');
-    const loadLLMSettings = document.getElementById('loadLLMSettings');
+
 
     // 提供商選擇變更事件
     if (llmProviderSelect) {
@@ -1440,12 +1416,7 @@ document.addEventListener('DOMContentLoaded', function() {
       });
     }
 
-    // 載入設定按鈕
-    if (loadLLMSettings) {
-      loadLLMSettings.addEventListener('click', function() {
-        loadLLMSettingsHandler();
-      });
-    }
+
 
     // 初始載入設定
     loadLLMSettingsHandler();

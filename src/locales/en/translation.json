@@ -20,13 +20,10 @@
     "placeholder": "Enter your custom AI prompt, or leave blank to use default settings...",
     "save": "💾 Save Settings",
     "reset": "🔄 Reset to Default",
-    "loadCurrent": "📥 Load Current Settings",
     "saved": "Prompt saved",
     "saveFailed": "Save failed",
     "resetSuccess": "Reset to default",
     "resetFailed": "Reset failed",
-    "loaded": "Current settings loaded",
-    "loadFailed": "Load failed",
     "defaultSystemPrompt": "Please help me summarize the following Slack thread content (provide in Markdown format):\n\n**Note: The following content uses Markdown format, including clickable links and user mentions**\n\n{MESSAGES}\n\nPlease provide:\n1. **Main discussion topics**\n  - If there are different topics, please list them separately and indicate related messages.\n2. **Key decisions or conclusions**\n  - If there are different decisions, please list them separately and indicate related messages.\n3. **Items requiring follow-up actions**\n  - If there are different items requiring follow-up actions, please list them separately and indicate responsible persons.\n4. **Other important matters**\n  - If there are other important matters, please list them separately and indicate related messages.\n\n*Please preserve Markdown format in your response, especially links and user mentions*",
     "loadError": "❌ Load failed",
     "defaultContentTruncated": "... (default content truncated)",
@@ -39,9 +36,7 @@
     "statusCustom": "Status: Custom mode",
     "saveCustomSuccess": "✅ Custom prompt saved",
     "clearCustomSuccess": "✅ Custom prompt cleared, will use default",
-    "resetToDefaultSuccess": "🔄 Reset to default prompt",
-    "loadCurrentSuccess": "📥 Current saved settings loaded",
-    "loadDefaultSuccess": "📥 Currently using default settings (edit area cleared)"
+    "resetToDefaultSuccess": "🔄 Reset to default prompt"
   },
   "scroll": {
     "title": "⚙️ Thread Message Reading Settings",
@@ -60,13 +55,10 @@
     "noMaxNewMessagesCountDesc": "Stop scrolling after this many consecutive attempts with no new messages",
     "save": "💾 Save Settings",
     "reset": "🔄 Reset to Default",
-    "loadCurrent": "📥 Load Current Settings",
     "saved": "Scroll settings saved",
     "saveFailed": "Save failed",
     "resetSuccess": "Reset to default",
     "resetFailed": "Reset failed",
-    "loaded": "Current settings loaded",
-    "loadFailed": "Load failed",
     "confirmReset": "Are you sure you want to reset scroll settings to default values?"
   },
   "sync": {
@@ -160,13 +152,10 @@
 
     "save": "💾 Save Settings",
     "reset": "🔄 Reset Settings",
-    "loadCurrent": "📥 Load Current Settings",
     "saved": "✅ LLM settings saved",
     "saveFailed": "Failed to save settings",
     "resetSuccess": "🔄 LLM settings reset",
     "resetFailed": "Failed to reset settings",
-    "loaded": "📥 Current settings loaded",
-    "loadFailed": "Failed to load settings",
     "selectProviderFirst": "Please select an LLM provider first",
     "fillRequiredFields": "Please fill in all required fields",
     "invalidHeadersFormat": "Invalid custom headers format, please use valid JSON",
