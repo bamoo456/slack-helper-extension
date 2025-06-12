@@ -220,7 +220,8 @@
     "copiedToClipboard": "Copied to clipboard!",
     "failedToCopy": "Failed to copy",
     "textReplaced": "Text replaced!",
-    "unknownAction": "Unknown action selected."
+    "unknownAction": "Unknown action selected.",
+    "noModelSelected": "No model selected"
   },
   "usage": {
     "title": "Usage Instructions:",

@@ -219,7 +219,8 @@
     "copiedToClipboard": "已複製到剪貼簿！",
     "failedToCopy": "複製失敗",
     "textReplaced": "文字已替換！",
-    "unknownAction": "未知的操作選項。"
+    "unknownAction": "未知的操作選項。",
+    "noModelSelected": "未選擇模型"
   },
   "usage": {
     "title": "使用方法：",

@@ -438,10 +438,10 @@ export class MessageHelper {
     svg.appendChild(path);
     button.appendChild(svg);
 
-    button.addEventListener('click', (e) => {
+    button.addEventListener('click', async (e) => {
       e.preventDefault();
       e.stopPropagation();
-      this.handleRefineClick(button);
+      await this.handleRefineClick(button);
     });
 
     return button;
@@ -464,20 +464,24 @@ export class MessageHelper {
   /**
    * Handle refine button click
    */
-  handleRefineClick(button) {
+  async handleRefineClick(button) {
     if (this.currentDropdown) {
       this.hideRefineDropdown();
     } else {
-      this.showRefineDropdown(button);
+      await this.showRefineDropdown(button);
     }
   }
 
   /**
    * Show the refine dropdown menu
    */
-  showRefineDropdown(button) {
+  async showRefineDropdown(button) {
     const dropdown = document.createElement('div');
     dropdown.className = 'slack-helper-refine-dropdown slack-helper-refine-dropdown-expanded';
+
+    // Create model selector header
+    const modelHeader = await this.createModelSelector(button);
+    dropdown.appendChild(modelHeader);
 
     // Create custom prompt input
     const inputContainer = this.createPromptInput(button);
@@ -574,6 +578,186 @@ export class MessageHelper {
         viewport: { width: viewportWidth, height: viewportHeight }
       });
     });
+  }
+
+  /**
+   * Create model selector header
+   */
+  async createModelSelector(button) {
+    const modelContainer = document.createElement('div');
+    modelContainer.className = 'slack-helper-model-selector';
+    
+    // Get current global default model
+    const currentModel = await this.getCurrentGlobalDefaultModel();
+    const availableModels = await this.getAvailableModels();
+    
+    // Create model display/selector
+    const modelSelector = document.createElement('div');
+    modelSelector.className = 'slack-helper-model-dropdown';
+    
+    const modelButton = document.createElement('button');
+    modelButton.className = 'slack-helper-model-button';
+    modelButton.type = 'button';
+    
+    // Create model icon and text
+    const modelIcon = document.createElement('span');
+    modelIcon.className = 'slack-helper-model-icon';
+    modelIcon.textContent = currentModel.icon || '❓';
+    
+    const modelText = document.createElement('span');
+    modelText.className = 'slack-helper-model-text';
+    modelText.textContent = currentModel.displayName || this.t('noModelSelected', 'No model selected');
+    
+    const dropdownIcon = document.createElement('span');
+    dropdownIcon.className = 'slack-helper-dropdown-arrow';
+    dropdownIcon.innerHTML = '▼';
+    
+    modelButton.appendChild(modelIcon);
+    modelButton.appendChild(modelText);
+    modelButton.appendChild(dropdownIcon);
+    
+    // Create dropdown options (initially hidden)
+    const optionsContainer = document.createElement('div');
+    optionsContainer.className = 'slack-helper-model-options';
+    optionsContainer.style.display = 'none';
+    
+    // Add available models to dropdown
+    availableModels.forEach(model => {
+      const option = document.createElement('div');
+      option.className = 'slack-helper-model-option';
+      if (model.value === currentModel.value) {
+        option.classList.add('selected');
+      }
+      
+      const optionIcon = document.createElement('span');
+      optionIcon.className = 'slack-helper-model-option-icon';
+      optionIcon.textContent = model.icon;
+      
+      const optionText = document.createElement('span');
+      optionText.className = 'slack-helper-model-option-text';
+      optionText.textContent = model.displayName;
+      
+      option.appendChild(optionIcon);
+      option.appendChild(optionText);
+      
+      option.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.selectModel(model, modelText, optionsContainer);
+      });
+      
+      optionsContainer.appendChild(option);
+    });
+    
+    // Toggle dropdown on button click
+    modelButton.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isVisible = optionsContainer.style.display !== 'none';
+      optionsContainer.style.display = isVisible ? 'none' : 'block';
+      modelButton.classList.toggle('open', !isVisible);
+    });
+    
+    modelSelector.appendChild(modelButton);
+    modelSelector.appendChild(optionsContainer);
+    modelContainer.appendChild(modelSelector);
+    
+    return modelContainer;
+  }
+
+  /**
+   * Get current global default model
+   */
+  async getCurrentGlobalDefaultModel() {
+    return new Promise((resolve) => {
+      chrome.storage.local.get(['globalDefaultModel', 'providerModels'], (result) => {
+        const globalDefault = result.globalDefaultModel;
+        const providerModels = result.providerModels || {};
+        
+        if (globalDefault && globalDefault.includes(':')) {
+          const [provider, modelName] = globalDefault.split(':');
+          const providerName = provider === 'openai' ? 'OpenAI' : 'OpenAI Compatible';
+          resolve({
+            value: globalDefault,
+            displayName: modelName,
+            provider: provider,
+            providerName: providerName,
+            icon: provider === 'openai' ? '🤖' : '🔧'
+          });
+        } else {
+          resolve({
+            value: '',
+            displayName: this.t('noModelSelected', 'No model selected'),
+            provider: '',
+            providerName: '',
+            icon: '❓'
+          });
+        }
+      });
+    });
+  }
+
+  /**
+   * Get available models for selection
+   */
+  async getAvailableModels() {
+    return new Promise((resolve) => {
+      chrome.storage.local.get(['providerModels'], (result) => {
+        const providerModels = result.providerModels || {};
+        const models = [];
+        
+        // Add models from all providers
+        Object.keys(providerModels).forEach(provider => {
+          const providerName = provider === 'openai' ? 'OpenAI' : 'OpenAI Compatible';
+          const icon = provider === 'openai' ? '🤖' : '🔧';
+          
+          providerModels[provider].forEach(model => {
+            models.push({
+              value: `${provider}:${model.name}`,
+              displayName: model.name,
+              provider: provider,
+              providerName: providerName,
+              icon: icon
+            });
+          });
+        });
+        
+        resolve(models);
+      });
+    });
+  }
+
+  /**
+   * Select a model and update the display
+   */
+  selectModel(model, modelTextElement, optionsContainer) {
+    // Update display text
+    modelTextElement.textContent = model.displayName;
+    
+    // Update icon
+    const modelIcon = modelTextElement.parentElement.querySelector('.slack-helper-model-icon');
+    if (modelIcon) {
+      modelIcon.textContent = model.icon;
+    }
+    
+    // Update selected state
+    optionsContainer.querySelectorAll('.slack-helper-model-option').forEach(option => {
+      option.classList.remove('selected');
+    });
+    
+    const selectedOption = Array.from(optionsContainer.querySelectorAll('.slack-helper-model-option'))
+      .find(option => option.querySelector('.slack-helper-model-option-text').textContent === model.displayName);
+    
+    if (selectedOption) {
+      selectedOption.classList.add('selected');
+    }
+    
+    // Save to storage
+    chrome.storage.local.set({ globalDefaultModel: model.value }, () => {
+      console.log('Global default model updated:', model.displayName);
+    });
+    
+    // Hide dropdown
+    optionsContainer.style.display = 'none';
+    optionsContainer.parentElement.querySelector('.slack-helper-model-button').classList.remove('open');
   }
 
   /**

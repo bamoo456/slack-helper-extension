@@ -65,8 +65,6 @@
   pointer-events: auto;
 }
 
-
-
 /* Responsive adjustments for smaller screens */
 @media (max-width: 768px) {
   .slack-helper-refine-dropdown {
@@ -172,4 +170,132 @@
 
 .slack-helper-custom-prompt-input::placeholder {
   color: #616061;
+}
+
+/* Model Selector Styles */
+.slack-helper-model-selector {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  background-color: #fafafa;
+  pointer-events: auto;
+}
+
+.slack-helper-model-dropdown {
+  position: relative;
+  width: 100%;
+}
+
+.slack-helper-model-button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 8px 12px;
+  background: white;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: Slack-Lato, appleLogo, sans-serif;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  outline: none;
+  pointer-events: auto;
+}
+
+.slack-helper-model-button:hover {
+  border-color: #007a5a;
+  box-shadow: 0 0 0 2px rgba(0, 122, 90, 0.1);
+}
+
+.slack-helper-model-button.open {
+  border-color: #007a5a;
+  box-shadow: 0 0 0 2px rgba(0, 122, 90, 0.1);
+}
+
+.slack-helper-model-icon {
+  margin-right: 8px;
+  font-size: 16px;
+}
+
+.slack-helper-model-text {
+  flex: 1;
+  text-align: left;
+  color: #1d1c1d;
+  font-weight: 500;
+}
+
+.slack-helper-dropdown-arrow {
+  margin-left: 8px;
+  color: #616061;
+  font-size: 12px;
+  transition: transform 0.2s ease;
+}
+
+.slack-helper-model-button.open .slack-helper-dropdown-arrow {
+  transform: rotate(180deg);
+}
+
+.slack-helper-model-options {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 2px solid #e0e0e0;
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  z-index: 10001;
+  max-height: 200px;
+  overflow-y: auto;
+  pointer-events: auto;
+}
+
+.slack-helper-model-option {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  border-bottom: 1px solid #f8f8f8;
+}
+
+.slack-helper-model-option:hover {
+  background-color: #f8f8f8;
+}
+
+.slack-helper-model-option.selected {
+  background-color: #e8f5e8;
+  color: #007a5a;
+}
+
+.slack-helper-model-option:last-child {
+  border-bottom: none;
+}
+
+.slack-helper-model-option-icon {
+  margin-right: 8px;
+  font-size: 14px;
+}
+
+.slack-helper-model-option-text {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* Responsive adjustments for model selector */
+@media (max-width: 768px) {
+  .slack-helper-model-selector {
+    padding: 10px 12px;
+  }
+  
+  .slack-helper-model-button {
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+  
+  .slack-helper-model-option {
+    padding: 6px 10px;
+  }
 }

@@ -90,7 +90,7 @@ class OpenAIProvider extends BaseLLMProvider {
   constructor(config = {}) {
     super(config);
     this.apiKey = config.apiKey || '';
-    this.model = config.model || 'gpt-3.5-turbo';
+    this.model = config.model || 'gpt-4.1-nano';
     this.baseUrl = config.baseUrl || 'https://api.openai.com/v1';
   }
 
@@ -102,6 +102,7 @@ class OpenAIProvider extends BaseLLMProvider {
     const prompt = this.buildPrompt(text, action, customPrompt);
     
     try {
+      console.log(`Sending prompt to OpenAI [${this.model}]`);
       const response = await fetch(`${this.baseUrl}/chat/completions`, {
         method: 'POST',
         headers: {
@@ -309,20 +310,116 @@ export class LLMService {
    * @returns {Promise<string>} - Processed text
    */
   async processText(text, action, customPrompt = '') {
-    const provider = this.getCurrentProvider();
-    if (!provider) {
-      throw new Error('No LLM provider is configured');
-    }
-
     if (!text || !text.trim()) {
       throw new Error('Input text is required');
     }
 
     try {
-      return await provider.processText(text, action, customPrompt);
+      // Get the currently selected model from storage
+      const selectedModel = await this.getCurrentSelectedModel();
+      let provider;
+      
+      if (selectedModel) {
+        // Use the provider that matches the selected model
+        const providerName = this.getProviderNameFromType(selectedModel.provider);
+        provider = this.providers.get(providerName);
+        
+        if (!provider) {
+          throw new Error(`Provider ${providerName} is not available`);
+        }
+        
+        // Ensure provider is configured with current settings
+        await this.ensureProviderConfigured(providerName);
+        provider = this.providers.get(providerName); // Get updated provider
+        
+        // Temporarily update the provider's model for this request
+        const originalModel = provider.model;
+        provider.model = selectedModel.name;
+        
+        try {
+          return await provider.processText(text, action, customPrompt);
+        } finally {
+          // Restore original model
+          provider.model = originalModel;
+        }
+      } else {
+        // Fallback to current provider if no model is selected
+        provider = this.getCurrentProvider();
+        if (!provider) {
+          throw new Error('No LLM provider is configured');
+        }
+        return await provider.processText(text, action, customPrompt);
+      }
     } catch (error) {
       console.error('LLM processing error:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Map provider type to provider name
+   * @param {string} providerType - Provider type from model data
+   * @returns {string} - Provider name for this.providers map
+   */
+  getProviderNameFromType(providerType) {
+    const mapping = {
+      'openai': 'openai',
+      'openai-compatible': 'openai-compatible'
+    };
+    return mapping[providerType] || providerType;
+  }
+
+  /**
+   * Ensure provider is configured with current settings
+   * @param {string} providerName - Provider name to configure
+   */
+  async ensureProviderConfigured(providerName) {
+    try {
+      // Load current LLM settings from storage
+      const result = await chrome.storage.local.get(['llmSettings']);
+      const settings = result.llmSettings;
+      
+      if (settings && settings.provider === providerName && settings.config) {
+        // Update provider with current configuration
+        if (providerName === 'openai') {
+          this.providers.set('openai', new OpenAIProvider(settings.config));
+        } else if (providerName === 'openai-compatible') {
+          this.providers.set('openai-compatible', new OpenAICompatibleProvider(settings.config));
+        }
+      }
+    } catch (error) {
+      console.error('Error ensuring provider configuration:', error);
+    }
+  }
+
+  /**
+   * Get the currently selected model from storage
+   * @returns {Promise<Object|null>} - Selected model info or null
+   */
+  async getCurrentSelectedModel() {
+    try {
+      const result = await chrome.storage.local.get(['globalDefaultModel', 'providerModels']);
+      const globalDefaultModel = result.globalDefaultModel;
+      const providerModels = result.providerModels || {};
+      
+      if (!globalDefaultModel) {
+        return null;
+      }
+      
+      // Parse the global default model format: "provider:modelName"
+      const [providerType, modelName] = globalDefaultModel.split(':');
+      if (!providerType || !modelName) {
+        return null;
+      }
+      
+      // Find the model in the provider models
+      const models = providerModels[providerType] || [];
+      const selectedModel = models.find(model => model.name === modelName);
+      
+      return selectedModel || null;
+    } catch (error) {
+      console.error('Error getting current selected model:', error);
+      return null;
     }
   }
 
