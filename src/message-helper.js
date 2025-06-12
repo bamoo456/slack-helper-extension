@@ -4,6 +4,7 @@
  */
 
 import { llmService } from './llm-service.js';
+import { SlackMessageFormatter } from './slack-message-formatter.js';
 
 export class MessageHelper {
   constructor() {
@@ -762,212 +763,10 @@ export class MessageHelper {
    * Extract text from input element while preserving formatting
    */
   extractTextFromInput(inputElement) {
-    if (!inputElement) return '';
-
-    // For regular input/textarea elements
-    if (inputElement.tagName === 'TEXTAREA' || inputElement.tagName === 'INPUT') {
-      const value = inputElement.value || '';
-      return value;
-    }
-
-    // For contenteditable elements (like Slack's rich text editor)
-    if (inputElement.contentEditable === 'true') {
-      const extractedText = this.extractFormattedText(inputElement);
-      console.log('Message Helper: Extracted text with formatting:', extractedText);
-      return extractedText;
-    }
-
-    // Fallback to textContent
-    const fallbackText = inputElement.textContent || '';
-    return fallbackText;
+    return SlackMessageFormatter.extractTextFromInput(inputElement);
   }
 
-  /**
-   * Extract formatted text from contenteditable element
-   * Preserves line breaks and emojis
-   */
-  extractFormattedText(element) {
-    // For Slack's Quill editor, we need to handle the specific structure and convert to Markdown
-    const html = element.innerHTML;
-    
-    // Create a temporary element to parse the HTML
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = html;
-    
-    let text = '';
-    let isFirstParagraph = true;
-    
-    // Process each child node (mainly <p> tags in Slack)
-    const processNode = (node) => {
-      if (node.nodeType === Node.TEXT_NODE) {
-        return node.textContent;
-      } else if (node.nodeType === Node.ELEMENT_NODE) {
-        const tagName = node.tagName.toLowerCase();
-        
-        switch (tagName) {
-          case 'p':
-            // Process paragraph content
-            let paragraphContent = '';
-            let hasRealContent = false;
-            let isEmptyParagraph = false;
-            
-            // Check if this paragraph only contains <br> (empty paragraph)
-            if (node.childNodes.length === 1 && 
-                node.childNodes[0].nodeType === Node.ELEMENT_NODE && 
-                node.childNodes[0].tagName.toLowerCase() === 'br') {
-              isEmptyParagraph = true;
-            }
-            
-            for (const child of node.childNodes) {
-              const childContent = processNode(child);
-              paragraphContent += childContent;
-              
-              // Check if this paragraph has real content (not just <br>)
-              if (child.nodeType === Node.TEXT_NODE && child.textContent.trim()) {
-                hasRealContent = true;
-              } else if (child.nodeType === Node.ELEMENT_NODE && child.tagName.toLowerCase() !== 'br') {
-                hasRealContent = true;
-              }
-            }
-            
-            // Handle different paragraph types:
-            if (isFirstParagraph) {
-              // First paragraph - no leading line break
-              isFirstParagraph = false;
-              return paragraphContent;
-            } else if (isEmptyParagraph) {
-              // Empty paragraph (only <br>) - represents a blank line
-              return '\n';
-            } else if (hasRealContent || paragraphContent.trim()) {
-              // Paragraph with content - add line break before it
-              return '\n' + paragraphContent;
-            } else {
-              // Empty paragraph without <br> - just add line break
-              return '\n';
-            }
-            
-          case 'br':
-            // Skip standalone <br> in paragraphs - they're handled by paragraph logic
-            return '';
-            
-          case 'ts-mention':
-            // Handle Slack mentions - convert to @username format
-            const mentionLabel = node.getAttribute('data-label');
-            if (mentionLabel) {
-              return mentionLabel; // This already includes the @ symbol
-            }
-            // Fallback to text content
-            return node.textContent || '';
-            
-          case 'code':
-            // Handle inline code - convert to markdown backticks
-            const codeContent = node.textContent || '';
-            return '`' + codeContent + '`';
-            
-          case 'a':
-            // Handle hyperlinks - convert to markdown link format
-            const linkText = node.textContent || '';
-            const linkHref = node.getAttribute('href') || '';
-            if (linkHref && linkText) {
-              return `[${linkText}](${linkHref})`;
-            }
-            // If no href or text, just return the text content
-            return linkText;
-            
-          case 'div':
-            // Handle code blocks
-            const className = node.className || '';
-            if (className.includes('ql-code-block')) {
-              const codeBlockContent = node.textContent || '';
-              // Add proper line breaks for code blocks
-              return '\n```\n' + codeBlockContent + '\n```\n';
-            }
-            
-            // Regular div, process children
-            let divContent = '';
-            for (const child of node.childNodes) {
-              divContent += processNode(child);
-            }
-            return divContent;
-            
-          case 'img':
-            // Handle emoji images - prioritize data-stringify-text
-            const stringifyText = node.getAttribute('data-stringify-text');
-            const dataTitle = node.getAttribute('data-title');
-            const alt = node.getAttribute('alt');
-            const title = node.getAttribute('title');
-            const dataEmoji = node.getAttribute('data-emoji');
-            const ariaLabel = node.getAttribute('aria-label');
-            
-            return stringifyText || dataTitle || dataEmoji || alt || title || ariaLabel || '';
-            
-          case 'span':
-            // Check if it's an emoji span
-            const emojiData = node.getAttribute('data-emoji');
-            if (emojiData) {
-              return emojiData;
-            }
-            
-            // Check for emoji class or other indicators
-            const spanClassName = node.className || '';
-            if (spanClassName.includes('emoji') || spanClassName.includes('emoticon')) {
-              const spanStringify = node.getAttribute('data-stringify-text');
-              const spanText = spanStringify || node.textContent || node.getAttribute('title') || node.getAttribute('aria-label') || '';
-              return spanText;
-            }
-            
-            // Regular span, process children
-            let spanContent = '';
-            for (const child of node.childNodes) {
-              spanContent += processNode(child);
-            }
-            return spanContent;
-            
-          default:
-            // For other elements, process children
-            let defaultContent = '';
-            for (const child of node.childNodes) {
-              defaultContent += processNode(child);
-            }
-            return defaultContent;
-        }
-      }
-      return '';
-    };
-    
-    // Process all child nodes
-    for (const child of tempDiv.childNodes) {
-      text += processNode(child);
-    }
-    
-    // Clean up the text - be more conservative with line break removal
-    text = text
-      .replace(/\n{3,}/g, '\n\n') // Replace 3+ consecutive line breaks with 2
-      .replace(/^\n+/, '') // Remove leading line breaks
-      .replace(/\n+$/, ''); // Remove trailing line breaks
-    
-    console.log('Message Helper: Extracted formatted text with Markdown:', JSON.stringify(text));
-    
-    // If we didn't get good results, fall back to simpler method
-    if (!text || text.length < 3) {
-      return this.simpleTextExtraction(element);
-    }
-    
-    return text;
-  }
 
-  /**
-   * Simple text extraction fallback
-   */
-  simpleTextExtraction(element) {
-    // Use innerText if available (preserves line breaks better than textContent)
-    if (element.innerText !== undefined) {
-      return element.innerText;
-    }
-    
-    // Fallback to textContent
-    return element.textContent || '';
-  }
 
   /**
    * Show loading state on button
@@ -1281,9 +1080,17 @@ export class MessageHelper {
         this.showPreviewFeedback(this.t('failedToCopy', 'Failed to copy'), true);
       }
     } else if (action === 'replace') {
-      this.updateInputText(this.previewInputElement, this.previewProcessedText);
-      this.showPreviewFeedback(this.t('textReplaced', 'Text replaced!'));
-      setTimeout(() => this.hideResultPreview(), 1000);
+      // Use SlackMessageFormatter to properly update the input with formatted content
+      const success = SlackMessageFormatter.updateSlackInput(this.previewInputElement, this.previewProcessedText);
+      
+      if (success) {
+        this.showPreviewFeedback(this.t('textReplaced', 'Text replaced!'));
+      } else {
+        // Fallback to the original method if the new formatter fails
+        this.updateInputText(this.previewInputElement, this.previewProcessedText);
+        this.showPreviewFeedback(this.t('textReplaced', 'Text replaced!'));
+      }
+      setTimeout(() => this.hideResultPreview(), 300);
     }
   }
 
