@@ -76,6 +76,9 @@ export class SlackMessageFormatter {
           case 'span':
             return this._processSpan(node);
             
+          case 'blockquote':
+            return this._processBlockquote(node);
+            
           default:
             // For other elements, process children
             let defaultContent = '';
@@ -98,6 +101,15 @@ export class SlackMessageFormatter {
       );
     };
 
+    // Helper to identify blockquote elements
+    const isBlockquoteElement = (n) => {
+      return (
+        n &&
+        n.nodeType === Node.ELEMENT_NODE &&
+        n.tagName.toLowerCase() === 'blockquote'
+      );
+    };
+
     const children = Array.from(tempDiv.childNodes);
     for (let i = 0; i < children.length; i++) {
       const child = children[i];
@@ -117,6 +129,26 @@ export class SlackMessageFormatter {
         // Build single markdown fenced block
         const combinedCode = codeLines.join('\n');
         text += `\n\`\`\`\n${combinedCode}\n\`\`\`\n`;
+
+        // Continue to next iteration
+        continue;
+      }
+
+      // Group consecutive blockquote elements into markdown blockquote format
+      if (isBlockquoteElement(child)) {
+        let quoteLines = [];
+        // Collect all consecutive blockquote elements
+        while (i < children.length && isBlockquoteElement(children[i])) {
+          const quoteText = children[i].textContent || '';
+          quoteLines.push(quoteText);
+          i++;
+        }
+        // We advanced one step too far in the while loop; step back so the for-loop increment lands correctly
+        i--;
+
+        // Build markdown blockquote format (each line prefixed with >)
+        const quotedLines = quoteLines.map(line => `> ${line}`);
+        text += `\n${quotedLines.join('\n')}\n`;
 
         // Continue to next iteration
         continue;
@@ -293,6 +325,15 @@ export class SlackMessageFormatter {
   }
 
   /**
+   * Process blockquote elements
+   */
+  static _processBlockquote(node) {
+    // Handle blockquotes - convert to markdown quote format
+    const quoteContent = node.textContent || '';
+    return `> ${quoteContent}`;
+  }
+
+  /**
    * Process a single node recursively
    */
   static _processNode(node) {
@@ -314,6 +355,8 @@ export class SlackMessageFormatter {
           return this._processImage(node);
         case 'span':
           return this._processSpan(node);
+        case 'blockquote':
+          return this._processBlockquote(node);
         case 'br':
           return '';
         default:
@@ -350,6 +393,12 @@ export class SlackMessageFormatter {
       return divs.join('');
     });
     
+    // Convert blockquotes (> line format) to Slack blockquote elements
+    // Match lines that start with > (with optional space after)
+    html = html.replace(/^> (.*)$/gm, (match, content) => {
+      return `<blockquote>${this._escapeHtml(content)}</blockquote>`;
+    });
+    
     // Convert inline code
     html = html.replace(/`([^`]+)`/g, (match, code) => {
       return `<code>${this._escapeHtml(code)}</code>`;
@@ -375,6 +424,9 @@ export class SlackMessageFormatter {
         paragraphs.push('<p><br></p>');
       } else if (line.startsWith('<div class="ql-code-block">')) {
         // Code block - add as-is (already processed above)
+        paragraphs.push(line);
+      } else if (line.startsWith('<blockquote>')) {
+        // Blockquote - add as-is (already processed above)
         paragraphs.push(line);
       } else {
         // Regular content - wrap in paragraph
