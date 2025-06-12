@@ -140,9 +140,7 @@
     "compatibleBaseUrl": "API Base URL",
     "compatibleBaseUrlPlaceholder": "https://your-api-server.com/v1",
     "compatibleBaseUrlDesc": "Enter your API server base URL",
-    "compatibleModel": "Model Name",
-    "compatibleModelPlaceholder": "gpt-3.5-turbo",
-    "compatibleModelDesc": "Enter the model name to use",
+    
     "compatibleHeaders": "Custom Headers (JSON format, optional)",
     "compatibleHeadersPlaceholder": "{\"Authorization\": \"Bearer your-token\", \"Custom-Header\": \"value\"}",
     "compatibleHeadersDesc": "Enter additional HTTP Headers (JSON format)",

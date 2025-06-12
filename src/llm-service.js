@@ -141,8 +141,6 @@ class OpenAIProvider extends BaseLLMProvider {
     return !!this.apiKey;
   }
 
-
-
   buildPrompt(text, action, customPrompt) {
     const actionPrompts = {
       'rephrase': `Please rephrase the following message to make it sound different while keeping the same meaning:\n\n${text}`,
@@ -162,7 +160,7 @@ class OpenAICompatibleProvider extends BaseLLMProvider {
   constructor(config = {}) {
     super(config);
     this.baseUrl = config.baseUrl || '';
-    this.model = config.model || 'gpt-3.5-turbo';
+    this.model = config.model || '';
     this.customHeaders = config.customHeaders || {};
     this.customParams = config.customParams || {};
   }
@@ -172,11 +170,15 @@ class OpenAICompatibleProvider extends BaseLLMProvider {
       throw new Error('Base URL is required');
     }
 
+    if (!this.model) {
+      throw new Error('Model name is required. Please select a model in the LLM settings.');
+    }
+
     const prompt = this.buildPrompt(text, action, customPrompt);
     
+    console.log(`Sending prompt to OpenAI Compatible API [${this.model}]`);
     try {
       const headers = {
-        'Content-Type': 'application/json',
         ...this.customHeaders
       };
 
@@ -197,17 +199,28 @@ class OpenAICompatibleProvider extends BaseLLMProvider {
         ...this.customParams
       };
 
-      const response = await fetch(`${this.baseUrl}/chat/completions`, {
-        method: 'POST',
-        headers: headers,
-        body: JSON.stringify(body)
+      // Send request via background script to bypass mixed-content restrictions
+      const data = await new Promise((resolve, reject) => {
+        chrome.runtime.sendMessage(
+          {
+            action: 'processLLMRequest',
+            baseUrl: this.baseUrl,
+            model: this.model,
+            headers,
+            body
+          },
+          (response) => {
+            if (chrome.runtime.lastError) {
+              reject(new Error(chrome.runtime.lastError.message));
+            } else if (response && response.success) {
+              resolve(response.result);
+            } else {
+              reject(new Error(response?.error || 'Unknown error from background'));
+            }
+          }
+        );
       });
 
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status} ${response.statusText}`);
-      }
-
-      const data = await response.json();
       return data.choices[0]?.message?.content?.trim() || text;
     } catch (error) {
       console.error('OpenAI Compatible API error:', error);
@@ -216,10 +229,8 @@ class OpenAICompatibleProvider extends BaseLLMProvider {
   }
 
   async isAvailable() {
-    return !!this.baseUrl && !!this.model;
+    return !!this.baseUrl;
   }
-
-
 
   buildPrompt(text, action, customPrompt) {
     const actionPrompts = {
@@ -423,8 +434,6 @@ export class LLMService {
     }
   }
 
-
-
   /**
    * Load configuration from storage
    */
@@ -466,8 +475,6 @@ export class LLMService {
       console.error('Error saving LLM configuration:', error);
     }
   }
-
-
 
   /**
    * Get current provider status

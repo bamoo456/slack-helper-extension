@@ -140,9 +140,7 @@
     "compatibleBaseUrl": "API Base URL",
     "compatibleBaseUrlPlaceholder": "https://your-api-server.com/v1",
     "compatibleBaseUrlDesc": "輸入您的 API 服務器基礎 URL",
-    "compatibleModel": "模型名稱",
-    "compatibleModelPlaceholder": "gpt-3.5-turbo",
-    "compatibleModelDesc": "輸入要使用的模型名稱",
+    
     "compatibleHeaders": "自定義 Headers（JSON 格式，可選）",
     "compatibleHeadersPlaceholder": "{\"Authorization\": \"Bearer your-token\", \"Custom-Header\": \"value\"}",
     "compatibleHeadersDesc": "輸入額外的 HTTP Headers（JSON 格式）",

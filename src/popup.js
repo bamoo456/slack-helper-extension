@@ -481,7 +481,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const labelMappings = [
       { selector: 'label[for="openaiApiKey"]', text: llmSection.openaiApiKey },
       { selector: 'label[for="compatibleBaseUrl"]', text: llmSection.compatibleBaseUrl },
-      { selector: 'label[for="compatibleModel"]', text: llmSection.compatibleModel },
+
       { selector: 'label[for="compatibleHeaders"]', text: llmSection.compatibleHeaders },
       { selector: 'label[for="compatibleParams"]', text: llmSection.compatibleParams },
       { selector: 'label[for="globalDefaultModelSelect"]', text: llmSection.globalDefaultModelLabel || '全局預設模型' }
@@ -498,11 +498,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const placeholderMappings = [
       { id: 'openaiApiKey', placeholder: llmSection.openaiApiKeyPlaceholder },
       { id: 'compatibleBaseUrl', placeholder: llmSection.compatibleBaseUrlPlaceholder },
-      { id: 'compatibleModel', placeholder: llmSection.compatibleModelPlaceholder },
+      
       { id: 'compatibleHeaders', placeholder: llmSection.compatibleHeadersPlaceholder },
       { id: 'compatibleParams', placeholder: llmSection.compatibleParamsPlaceholder },
       { id: 'newOpenaiModelName', placeholder: llmSection.openaiModelPlaceholder || '輸入 OpenAI 模型名稱（例如：gpt-4, gpt-3.5-turbo）' },
-      { id: 'newCompatibleModelName', placeholder: llmSection.compatibleModelPlaceholder || '輸入 Compatible 模型名稱（例如：claude-3-sonnet, llama-2）' }
+              { id: 'newCompatibleModelName', placeholder: '輸入 Compatible 模型名稱（例如：claude-3-sonnet, llama-2）' }
     ];
 
     placeholderMappings.forEach(mapping => {
@@ -558,7 +558,7 @@ document.addEventListener('DOMContentLoaded', function() {
       { selector: 'label[for="llmProviderSelect"]', text: llmSection.selectProviderDesc },
       { selector: 'label[for="openaiApiKey"]', text: llmSection.openaiApiKeyDesc },
       { selector: 'label[for="compatibleBaseUrl"]', text: llmSection.compatibleBaseUrlDesc },
-      { selector: 'label[for="compatibleModel"]', text: llmSection.compatibleModelDesc },
+      
       { selector: 'label[for="compatibleHeaders"]', text: llmSection.compatibleHeadersDesc },
       { selector: 'label[for="compatibleParams"]', text: llmSection.compatibleParamsDesc },
       { selector: 'label[for="globalDefaultModelSelect"]', text: llmSection.globalDefaultModelSelectDesc || '選擇訊息增強功能的全局預設模型（跨所有提供商）' }
@@ -1861,18 +1861,16 @@ document.addEventListener('DOMContentLoaded', function() {
       };
     } else if (selectedProvider === 'openai-compatible') {
       const baseUrl = document.getElementById('compatibleBaseUrl')?.value;
-      const model = document.getElementById('compatibleModel')?.value;
       const headers = document.getElementById('compatibleHeaders')?.value;
       const params = document.getElementById('compatibleParams')?.value;
       
-      if (!baseUrl || !model) {
+      if (!baseUrl) {
         showLLMActionStatus(translations.fillRequiredFields || '請填寫所有必要欄位', 'error');
         return;
       }
       
       settings.config = {
-        baseUrl: baseUrl,
-        model: model
+        baseUrl: baseUrl
       };
       
       // 解析自定義 headers 和 params
@@ -1922,14 +1920,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const llmProviderSelect = document.getElementById('llmProviderSelect');
     const openaiApiKey = document.getElementById('openaiApiKey');
     const compatibleBaseUrl = document.getElementById('compatibleBaseUrl');
-    const compatibleModel = document.getElementById('compatibleModel');
     const compatibleHeaders = document.getElementById('compatibleHeaders');
     const compatibleParams = document.getElementById('compatibleParams');
     
     if (llmProviderSelect) llmProviderSelect.value = '';
     if (openaiApiKey) openaiApiKey.value = '';
     if (compatibleBaseUrl) compatibleBaseUrl.value = '';
-    if (compatibleModel) compatibleModel.value = '';
     if (compatibleHeaders) compatibleHeaders.value = '';
     if (compatibleParams) compatibleParams.value = '';
     
@@ -1975,12 +1971,10 @@ document.addEventListener('DOMContentLoaded', function() {
         if (openaiApiKey) openaiApiKey.value = settings.config.apiKey || '';
       } else if (settings.provider === 'openai-compatible' && settings.config) {
         const compatibleBaseUrl = document.getElementById('compatibleBaseUrl');
-        const compatibleModel = document.getElementById('compatibleModel');
         const compatibleHeaders = document.getElementById('compatibleHeaders');
         const compatibleParams = document.getElementById('compatibleParams');
         
         if (compatibleBaseUrl) compatibleBaseUrl.value = settings.config.baseUrl || '';
-        if (compatibleModel) compatibleModel.value = settings.config.model || '';
         if (compatibleHeaders && settings.config.customHeaders) {
           compatibleHeaders.value = JSON.stringify(settings.config.customHeaders, null, 2);
         }

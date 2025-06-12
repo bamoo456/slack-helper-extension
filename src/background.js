@@ -227,6 +227,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         sendResponse({ error: error.message });
       });
     return true; // 保持異步響應開啟
+  } else if (request.action === 'processLLMRequest') {
+    handleLLMRequest(request)
+      .then(result => sendResponse({ success: true, result }))
+      .catch(error => sendResponse({ success: false, error: error.message }));
+    return true; // keep the message channel open for async response
   }
 });
 
@@ -334,4 +339,40 @@ chrome.runtime.onInstalled.addListener((details) => {
 chrome.runtime.onStartup.addListener(() => {
   console.log(getTranslation('background.chromeStartup', 'Chrome 啟動，初始化背景模型同步'));
   // 啟動時不需要立即同步，等待用戶操作時再同步
-}); 
+});
+
+// =========================
+// LLM API PROXY
+// =========================
+
+/**
+ * Proxy LLM API requests (OpenAI-compatible) via background script to bypass
+ * mixed-content restrictions when content scripts run on https origins.
+ * @param {Object} request - Message payload from content script
+ * @returns {Promise<Object>} Parsed JSON response from the LLM server
+ */
+async function handleLLMRequest(request) {
+  const { baseUrl, headers = {}, body } = request;
+  if (!baseUrl) {
+    throw new Error('Base URL is required');
+  }
+
+  console.log('[Slack-Helper] Background proxy ->', baseUrl);
+
+  const response = await fetch(`${baseUrl}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...headers
+    },
+    body: JSON.stringify(body)
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`API error: ${response.status} ${response.statusText} - ${errorText}`);
+  }
+
+  return response.json();
+}
+// ========================= 
