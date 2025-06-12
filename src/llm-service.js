@@ -120,7 +120,6 @@ class OpenAIProvider extends BaseLLMProvider {
               content: prompt
             }
           ],
-          max_tokens: 500,
           temperature: 0.7
         })
       });
@@ -139,6 +138,176 @@ class OpenAIProvider extends BaseLLMProvider {
 
   async isAvailable() {
     return !!this.apiKey;
+  }
+
+  /**
+   * Test the API connection
+   * @returns {Promise<boolean>} - True if connection is successful
+   */
+  async testConnection() {
+    if (!this.apiKey) {
+      throw new Error('API key is required');
+    }
+
+    try {
+      const response = await fetch(`${this.baseUrl}/models`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`API test failed: ${response.status} ${response.statusText}`);
+      }
+
+      return true;
+    } catch (error) {
+      console.error('OpenAI API test error:', error);
+      throw error;
+    }
+  }
+
+  buildPrompt(text, action, customPrompt) {
+    const actionPrompts = {
+      'rephrase': `Please rephrase the following message to make it sound different while keeping the same meaning:\n\n"${text}"`,
+      'refine': `Please refine and improve the following message for better clarity, professionalism, and impact:\n\n"${text}"`,
+      'fix_grammar': `Please fix any grammar, spelling, or punctuation errors in the following message:\n\n"${text}"`,
+      'custom': `${customPrompt}\n\nApply this instruction to the following message:\n\n"${text}"`
+    };
+
+    return actionPrompts[action] || `Please improve the following message:\n\n"${text}"`;
+  }
+}
+
+/**
+ * OpenAI Compatible LLM Provider
+ */
+class OpenAICompatibleProvider extends BaseLLMProvider {
+  constructor(config = {}) {
+    super(config);
+    this.baseUrl = config.baseUrl || '';
+    this.model = config.model || 'gpt-3.5-turbo';
+    this.customHeaders = config.customHeaders || {};
+    this.customParams = config.customParams || {};
+  }
+
+  async processText(text, action, customPrompt = '') {
+    if (!this.baseUrl) {
+      throw new Error('Base URL is required');
+    }
+
+    const prompt = this.buildPrompt(text, action, customPrompt);
+    
+    try {
+      const headers = {
+        'Content-Type': 'application/json',
+        ...this.customHeaders
+      };
+
+      const body = {
+        model: this.model,
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a helpful assistant that helps improve text messages for Slack communication. Always return only the improved text without additional explanations unless specifically asked.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        max_tokens: 500,
+        temperature: 0.7,
+        ...this.customParams
+      };
+
+      const response = await fetch(`${this.baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify(body)
+      });
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return data.choices[0]?.message?.content?.trim() || text;
+    } catch (error) {
+      console.error('OpenAI Compatible API error:', error);
+      throw error;
+    }
+  }
+
+  async isAvailable() {
+    return !!this.baseUrl && !!this.model;
+  }
+
+  /**
+   * Test the API connection
+   * @returns {Promise<boolean>} - True if connection is successful
+   */
+  async testConnection() {
+    if (!this.baseUrl) {
+      throw new Error('Base URL is required');
+    }
+
+    try {
+      const headers = {
+        'Content-Type': 'application/json',
+        ...this.customHeaders
+      };
+
+      // Try to get models list or make a simple completion request
+      let testUrl = `${this.baseUrl}/models`;
+      let testMethod = 'GET';
+      let testBody = null;
+
+      // If models endpoint fails, try a simple completion
+      try {
+        const modelsResponse = await fetch(testUrl, {
+          method: testMethod,
+          headers: headers
+        });
+
+        if (modelsResponse.ok) {
+          return true;
+        }
+      } catch (modelsError) {
+        console.log('Models endpoint not available, trying completion test...');
+      }
+
+      // Fallback to completion test
+      testUrl = `${this.baseUrl}/chat/completions`;
+      testMethod = 'POST';
+      testBody = JSON.stringify({
+        model: this.model,
+        messages: [
+          {
+            role: 'user',
+            content: 'Test'
+          }
+        ],
+        max_tokens: 1,
+        ...this.customParams
+      });
+
+      const response = await fetch(testUrl, {
+        method: testMethod,
+        headers: headers,
+        body: testBody
+      });
+
+      if (!response.ok) {
+        throw new Error(`API test failed: ${response.status} ${response.statusText}`);
+      }
+
+      return true;
+    } catch (error) {
+      console.error('OpenAI Compatible API test error:', error);
+      throw error;
+    }
   }
 
   buildPrompt(text, action, customPrompt) {
@@ -175,6 +344,9 @@ export class LLMService {
     // Register OpenAI provider
     this.providers.set('openai', new OpenAIProvider());
     
+    // Register OpenAI Compatible provider
+    this.providers.set('openai-compatible', new OpenAICompatibleProvider());
+    
     // Set default provider to mock for testing
     this.currentProvider = 'mock';
   }
@@ -192,6 +364,8 @@ export class LLMService {
     // Update provider configuration
     if (providerName === 'openai') {
       this.providers.set('openai', new OpenAIProvider(config));
+    } else if (providerName === 'openai-compatible') {
+      this.providers.set('openai-compatible', new OpenAICompatibleProvider(config));
     }
 
     const provider = this.providers.get(providerName);
@@ -249,11 +423,20 @@ export class LLMService {
    */
   async loadConfiguration() {
     try {
-      const result = await chrome.storage.local.get(['llmServiceConfig']);
-      const config = result.llmServiceConfig || {};
+      // Load from the new storage format used by popup.js
+      const result = await chrome.storage.local.get(['llmSettings']);
+      const settings = result.llmSettings;
       
-      if (config.provider && config.providerConfig) {
-        await this.setProvider(config.provider, config.providerConfig);
+      if (settings && settings.provider && settings.config) {
+        await this.setProvider(settings.provider, settings.config);
+      } else {
+        // Fallback to old format for backward compatibility
+        const oldResult = await chrome.storage.local.get(['llmServiceConfig']);
+        const oldConfig = oldResult.llmServiceConfig || {};
+        
+        if (oldConfig.provider && oldConfig.providerConfig) {
+          await this.setProvider(oldConfig.provider, oldConfig.providerConfig);
+        }
       }
     } catch (error) {
       console.error('Error loading LLM configuration:', error);
@@ -265,14 +448,33 @@ export class LLMService {
    */
   async saveConfiguration() {
     try {
+      // Save in the new format used by popup.js
       await chrome.storage.local.set({
-        llmServiceConfig: {
+        llmSettings: {
           provider: this.currentProvider,
-          providerConfig: this.config
+          config: this.config
         }
       });
     } catch (error) {
       console.error('Error saving LLM configuration:', error);
+    }
+  }
+
+  /**
+   * Test the current provider connection
+   * @returns {Promise<boolean>} - True if connection is successful
+   */
+  async testConnection() {
+    const provider = this.getCurrentProvider();
+    if (!provider) {
+      throw new Error('No LLM provider is configured');
+    }
+
+    if (typeof provider.testConnection === 'function') {
+      return await provider.testConnection();
+    } else {
+      // Fallback to isAvailable check
+      return await provider.isAvailable();
     }
   }
 

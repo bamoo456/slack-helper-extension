@@ -66,8 +66,7 @@
         "src/locales/*/*.json",
         "locales/*/*.json",
         "src/message-helper.css",
-        "src/llm-service.js",
-        "src/llm-test.html"
+        "src/llm-service.js"
       ],
       "matches": ["<all_urls>"]
     }

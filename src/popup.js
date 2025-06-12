@@ -1463,7 +1463,7 @@ document.addEventListener('DOMContentLoaded', function() {
     loadLLMSettingsHandler();
   }
 
-  function testLLMConnectionHandler() {
+  async function testLLMConnectionHandler() {
     const llmTestStatus = document.getElementById('llmTestStatus');
     const llmProviderSelect = document.getElementById('llmProviderSelect');
     
@@ -1476,16 +1476,70 @@ document.addEventListener('DOMContentLoaded', function() {
     llmTestStatus.className = 'llm-test-status loading show';
     llmTestStatus.textContent = translations.testConnectionTesting || '正在測試 API 連接...';
     
-    // 模擬測試（實際實作時會調用真實的 API 測試）
-    setTimeout(() => {
-      // 這裡應該實作真實的 API 測試邏輯
-      llmTestStatus.className = 'llm-test-status success show';
-      llmTestStatus.textContent = translations.testConnectionSuccess || '✅ API 連接測試成功！';
+    try {
+      // 收集當前配置
+      let config = {};
       
-      setTimeout(() => {
-        llmTestStatus.classList.remove('show');
-      }, 3000);
-    }, 2000);
+      if (selectedProvider === 'openai') {
+        const apiKey = document.getElementById('openaiApiKey')?.value;
+        if (!apiKey) {
+          throw new Error(translations.apiKeyRequired || '請輸入 OpenAI API Key');
+        }
+        config = { apiKey };
+      } else if (selectedProvider === 'openai-compatible') {
+        const baseUrl = document.getElementById('compatibleBaseUrl')?.value;
+        const model = document.getElementById('compatibleModel')?.value;
+        const headers = document.getElementById('compatibleHeaders')?.value;
+        const params = document.getElementById('compatibleParams')?.value;
+        
+        if (!baseUrl || !model) {
+          throw new Error(translations.fillRequiredFields || '請填寫所有必要欄位');
+        }
+        
+        config = { baseUrl, model };
+        
+        if (headers) {
+          try {
+            config.customHeaders = JSON.parse(headers);
+          } catch (e) {
+            throw new Error(translations.invalidHeadersFormat || '自定義 Headers 格式錯誤');
+          }
+        }
+        
+        if (params) {
+          try {
+            config.customParams = JSON.parse(params);
+          } catch (e) {
+            throw new Error(translations.invalidParamsFormat || '自定義參數格式錯誤');
+          }
+        }
+      }
+      
+      // 發送消息到 content script 進行測試
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      
+      const response = await chrome.tabs.sendMessage(tab.id, {
+        action: 'testLLMConnection',
+        provider: selectedProvider,
+        config: config
+      });
+      
+      if (response && response.success) {
+        llmTestStatus.className = 'llm-test-status success show';
+        llmTestStatus.textContent = translations.testConnectionSuccess || '✅ API 連接測試成功！';
+      } else {
+        throw new Error(response?.error || 'API 測試失敗');
+      }
+      
+    } catch (error) {
+      console.error('LLM connection test error:', error);
+      llmTestStatus.className = 'llm-test-status error show';
+      llmTestStatus.textContent = `❌ ${error.message}`;
+    }
+    
+    setTimeout(() => {
+      llmTestStatus.classList.remove('show');
+    }, 5000);
   }
 
   function saveLLMSettingsHandler() {
@@ -1552,11 +1606,21 @@ document.addEventListener('DOMContentLoaded', function() {
     // 保存設定到 Chrome storage
     chrome.storage.local.set({
       'llmSettings': settings
-    }, function() {
+    }, async function() {
       if (chrome.runtime.lastError) {
         showLLMActionStatus((translations.saveFailed || '保存設定失敗') + ': ' + chrome.runtime.lastError.message, 'error');
       } else {
         showLLMActionStatus(translations.saved || '✅ LLM 設定已保存', 'success');
+        
+        // 通知 content script 重新載入 LLM 配置
+        try {
+          const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+          chrome.tabs.sendMessage(tab.id, {
+            action: 'reloadLLMConfig'
+          });
+        } catch (error) {
+          console.log('Could not notify content script about config change:', error);
+        }
       }
     });
   }

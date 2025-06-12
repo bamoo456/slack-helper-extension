@@ -514,7 +514,39 @@ chrome.runtime.onMessage.addListener(async function(request, sender, sendRespons
   console.log('Content script received message:', request);
   
   try {
-    // Ensure the extension is initialized
+    // Handle LLM-related messages
+    if (request.action === 'testLLMConnection') {
+      try {
+        // Import LLM service dynamically
+        const { llmService } = await import(chrome.runtime.getURL('src/llm-service.js'));
+        
+        // Set provider with the provided config
+        await llmService.setProvider(request.provider, request.config);
+        
+        // Test the connection
+        const success = await llmService.testConnection();
+        sendResponse({ success: true });
+      } catch (error) {
+        console.error('LLM connection test failed:', error);
+        sendResponse({ success: false, error: error.message });
+      }
+      return true; // Keep async response open
+    } else if (request.action === 'reloadLLMConfig') {
+      try {
+        // Import LLM service dynamically
+        const { llmService } = await import(chrome.runtime.getURL('src/llm-service.js'));
+        
+        // Reload configuration from storage
+        await llmService.loadConfiguration();
+        sendResponse({ success: true });
+      } catch (error) {
+        console.error('Failed to reload LLM config:', error);
+        sendResponse({ success: false, error: error.message });
+      }
+      return true; // Keep async response open
+    }
+    
+    // Ensure the extension is initialized for other actions
     if (!slackThreadExtractor) {
       initializeExtractor();
       // Wait a bit for initialization

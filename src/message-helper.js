@@ -121,7 +121,24 @@ export class MessageHelper {
     this.startObserving();
     this.processExistingInputs();
     this.setupLanguageChangeListener();
+    
+    // Initialize LLM service
+    await this.initializeLLMService();
+    
     this.initialized = true;
+  }
+
+  /**
+   * Initialize LLM service
+   */
+  async initializeLLMService() {
+    try {
+      // Load LLM configuration
+      await llmService.loadConfiguration();
+      console.log('LLM service initialized for message helper');
+    } catch (error) {
+      console.error('Failed to initialize LLM service:', error);
+    }
   }
 
   /**
@@ -135,6 +152,12 @@ export class MessageHelper {
         this.loadTranslations().then(() => {
           this.updateExistingUIElements();
         });
+      }
+      
+      // Listen for LLM settings changes
+      if (namespace === 'local' && changes.llmSettings) {
+        console.log('LLM settings changed, reloading configuration...');
+        this.initializeLLMService();
       }
     });
   }
