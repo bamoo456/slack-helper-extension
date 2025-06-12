@@ -157,11 +157,7 @@
     "compatibleParams": "Custom Request Parameters (JSON format, optional)",
     "compatibleParamsPlaceholder": "{\"temperature\": 0.7, \"max_tokens\": 500}",
     "compatibleParamsDesc": "Enter additional request parameters (JSON format)",
-    "testConnection": "🧪 Test Connection",
-    "testConnectionButton": "🔍 Test API Connection",
-    "testConnectionTesting": "Testing API connection...",
-    "testConnectionSuccess": "✅ API connection test successful!",
-    "testConnectionFailed": "❌ API connection test failed",
+
     "save": "💾 Save Settings",
     "reset": "🔄 Reset Settings",
     "loadCurrent": "📥 Load Current Settings",

@@ -515,23 +515,7 @@ chrome.runtime.onMessage.addListener(async function(request, sender, sendRespons
   
   try {
     // Handle LLM-related messages
-    if (request.action === 'testLLMConnection') {
-      try {
-        // Import LLM service dynamically
-        const { llmService } = await import(chrome.runtime.getURL('src/llm-service.js'));
-        
-        // Set provider with the provided config
-        await llmService.setProvider(request.provider, request.config);
-        
-        // Test the connection
-        const success = await llmService.testConnection();
-        sendResponse({ success: true });
-      } catch (error) {
-        console.error('LLM connection test failed:', error);
-        sendResponse({ success: false, error: error.message });
-      }
-      return true; // Keep async response open
-    } else if (request.action === 'reloadLLMConfig') {
+    if (request.action === 'reloadLLMConfig') {
       try {
         // Import LLM service dynamically
         const { llmService } = await import(chrome.runtime.getURL('src/llm-service.js'));

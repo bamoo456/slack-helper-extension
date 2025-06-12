@@ -466,7 +466,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (settingsGroups[0]) settingsGroups[0].textContent = llmSection.apiProvider;
     if (settingsGroups[1]) settingsGroups[1].textContent = llmSection.openaiConfig;
     if (settingsGroups[2]) settingsGroups[2].textContent = llmSection.compatibleConfig;
-    if (settingsGroups[3]) settingsGroups[3].textContent = llmSection.testConnection;
+
 
     // 更新提供商選擇
     const providerLabel = document.querySelector('label[for="llmProviderSelect"]');
@@ -515,8 +515,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
     // 更新按鈕
-    const testLLMConnection = document.getElementById('testLLMConnection');
-    if (testLLMConnection) testLLMConnection.textContent = llmSection.testConnectionButton;
 
     const saveLLMSettings = document.getElementById('saveLLMSettings');
     if (saveLLMSettings) saveLLMSettings.textContent = llmSection.save;
@@ -1400,9 +1398,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const llmProviderSelect = document.getElementById('llmProviderSelect');
     const openaiConfig = document.getElementById('openai-config');
     const openaiCompatibleConfig = document.getElementById('openai-compatible-config');
-    const llmTestSection = document.getElementById('llm-test-section');
     const llmActions = document.getElementById('llm-actions');
-    const testLLMConnection = document.getElementById('testLLMConnection');
     const saveLLMSettings = document.getElementById('saveLLMSettings');
     const resetLLMSettings = document.getElementById('resetLLMSettings');
     const loadLLMSettings = document.getElementById('loadLLMSettings');
@@ -1415,28 +1411,20 @@ document.addEventListener('DOMContentLoaded', function() {
         // 隱藏所有配置區域
         if (openaiConfig) openaiConfig.style.display = 'none';
         if (openaiCompatibleConfig) openaiCompatibleConfig.style.display = 'none';
-        if (llmTestSection) llmTestSection.style.display = 'none';
         if (llmActions) llmActions.style.display = 'none';
         
         // 根據選擇顯示對應的配置區域
         if (selectedProvider === 'openai') {
           if (openaiConfig) openaiConfig.style.display = 'block';
-          if (llmTestSection) llmTestSection.style.display = 'block';
           if (llmActions) llmActions.style.display = 'block';
         } else if (selectedProvider === 'openai-compatible') {
           if (openaiCompatibleConfig) openaiCompatibleConfig.style.display = 'block';
-          if (llmTestSection) llmTestSection.style.display = 'block';
           if (llmActions) llmActions.style.display = 'block';
         }
       });
     }
 
-    // 測試連接按鈕
-    if (testLLMConnection) {
-      testLLMConnection.addEventListener('click', function() {
-        testLLMConnectionHandler();
-      });
-    }
+
 
     // 保存設定按鈕
     if (saveLLMSettings) {
@@ -1463,84 +1451,7 @@ document.addEventListener('DOMContentLoaded', function() {
     loadLLMSettingsHandler();
   }
 
-  async function testLLMConnectionHandler() {
-    const llmTestStatus = document.getElementById('llmTestStatus');
-    const llmProviderSelect = document.getElementById('llmProviderSelect');
-    
-    if (!llmTestStatus || !llmProviderSelect) return;
-    
-    const selectedProvider = llmProviderSelect.value;
-    const translations = currentTranslations?.llm || {};
-    
-    // 顯示測試中狀態
-    llmTestStatus.className = 'llm-test-status loading show';
-    llmTestStatus.textContent = translations.testConnectionTesting || '正在測試 API 連接...';
-    
-    try {
-      // 收集當前配置
-      let config = {};
-      
-      if (selectedProvider === 'openai') {
-        const apiKey = document.getElementById('openaiApiKey')?.value;
-        if (!apiKey) {
-          throw new Error(translations.apiKeyRequired || '請輸入 OpenAI API Key');
-        }
-        config = { apiKey };
-      } else if (selectedProvider === 'openai-compatible') {
-        const baseUrl = document.getElementById('compatibleBaseUrl')?.value;
-        const model = document.getElementById('compatibleModel')?.value;
-        const headers = document.getElementById('compatibleHeaders')?.value;
-        const params = document.getElementById('compatibleParams')?.value;
-        
-        if (!baseUrl || !model) {
-          throw new Error(translations.fillRequiredFields || '請填寫所有必要欄位');
-        }
-        
-        config = { baseUrl, model };
-        
-        if (headers) {
-          try {
-            config.customHeaders = JSON.parse(headers);
-          } catch (e) {
-            throw new Error(translations.invalidHeadersFormat || '自定義 Headers 格式錯誤');
-          }
-        }
-        
-        if (params) {
-          try {
-            config.customParams = JSON.parse(params);
-          } catch (e) {
-            throw new Error(translations.invalidParamsFormat || '自定義參數格式錯誤');
-          }
-        }
-      }
-      
-      // 發送消息到 content script 進行測試
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      
-      const response = await chrome.tabs.sendMessage(tab.id, {
-        action: 'testLLMConnection',
-        provider: selectedProvider,
-        config: config
-      });
-      
-      if (response && response.success) {
-        llmTestStatus.className = 'llm-test-status success show';
-        llmTestStatus.textContent = translations.testConnectionSuccess || '✅ API 連接測試成功！';
-      } else {
-        throw new Error(response?.error || 'API 測試失敗');
-      }
-      
-    } catch (error) {
-      console.error('LLM connection test error:', error);
-      llmTestStatus.className = 'llm-test-status error show';
-      llmTestStatus.textContent = `❌ ${error.message}`;
-    }
-    
-    setTimeout(() => {
-      llmTestStatus.classList.remove('show');
-    }, 5000);
-  }
+
 
   function saveLLMSettingsHandler() {
     const llmProviderSelect = document.getElementById('llmProviderSelect');

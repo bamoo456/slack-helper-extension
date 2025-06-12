@@ -157,11 +157,7 @@
     "compatibleParams": "自定義請求參數（JSON 格式，可選）",
     "compatibleParamsPlaceholder": "{\"temperature\": 0.7, \"max_tokens\": 500}",
     "compatibleParamsDesc": "輸入額外的請求參數（JSON 格式）",
-    "testConnection": "🧪 測試連接",
-    "testConnectionButton": "🔍 測試 API 連接",
-    "testConnectionTesting": "正在測試 API 連接...",
-    "testConnectionSuccess": "✅ API 連接測試成功！",
-    "testConnectionFailed": "❌ API 連接測試失敗",
+
     "save": "💾 保存設定",
     "reset": "🔄 重置設定",
     "loadCurrent": "📥 載入當前設定",
