@@ -495,20 +495,85 @@ export class MessageHelper {
       dropdown.appendChild(menuItem);
     });
 
-    // Position and show dropdown
-    const buttonParent = button.parentElement;
-    if (getComputedStyle(buttonParent).position === 'static') {
-      buttonParent.classList.add('slack-helper-relative');
-    }
-
-    buttonParent.appendChild(dropdown);
+    // Use body as parent for more reliable positioning
+    document.body.appendChild(dropdown);
     this.currentDropdown = dropdown;
+
+    // Position dropdown immediately using fixed positioning
+    this.positionDropdownFixed(dropdown, button);
 
     // Add event listeners
     setTimeout(() => {
       document.addEventListener('click', this.handleClickOutside);
       document.addEventListener('keydown', this.handleKeyDown);
     }, 0);
+  }
+
+  /**
+   * Position dropdown using fixed positioning relative to button
+   */
+  positionDropdownFixed(dropdown, button) {
+    // Get button position
+    const buttonRect = button.getBoundingClientRect();
+    const viewportHeight = window.innerHeight;
+    const viewportWidth = window.innerWidth;
+    
+    // Set initial fixed positioning
+    dropdown.style.position = 'fixed';
+    dropdown.style.zIndex = '10000';
+    
+    // Force render to get dropdown dimensions
+    dropdown.style.visibility = 'hidden';
+    dropdown.style.display = 'block';
+    
+    // Wait for next frame to get accurate measurements
+    requestAnimationFrame(() => {
+      const dropdownRect = dropdown.getBoundingClientRect();
+      const dropdownHeight = dropdownRect.height;
+      const dropdownWidth = dropdownRect.width;
+      
+      // Calculate position
+      const padding = 10;
+      let top, left;
+      
+      // Determine vertical position
+      const spaceBelow = viewportHeight - buttonRect.bottom;
+      const spaceAbove = buttonRect.top;
+      
+      if (spaceBelow >= dropdownHeight + padding || spaceBelow > spaceAbove) {
+        // Position below button
+        top = buttonRect.bottom + 4;
+      } else {
+        // Position above button
+        top = buttonRect.top - dropdownHeight - 4;
+      }
+      
+      // Determine horizontal position
+      const spaceRight = viewportWidth - buttonRect.right;
+      
+      if (spaceRight >= dropdownWidth + padding) {
+        // Align with right edge of button
+        left = buttonRect.right - dropdownWidth;
+      } else {
+        // Align with left edge of button
+        left = buttonRect.left;
+      }
+      
+      // Ensure dropdown stays within viewport
+      top = Math.max(padding, Math.min(top, viewportHeight - dropdownHeight - padding));
+      left = Math.max(padding, Math.min(left, viewportWidth - dropdownWidth - padding));
+      
+      // Apply final position
+      dropdown.style.top = `${top}px`;
+      dropdown.style.left = `${left}px`;
+      dropdown.style.visibility = 'visible';
+      
+      console.log('Dropdown positioned:', {
+        button: { top: buttonRect.top, left: buttonRect.left, bottom: buttonRect.bottom, right: buttonRect.right },
+        dropdown: { width: dropdownWidth, height: dropdownHeight, top, left },
+        viewport: { width: viewportWidth, height: viewportHeight }
+      });
+    });
   }
 
   /**
@@ -643,14 +708,9 @@ export class MessageHelper {
     document.removeEventListener('click', this.handleClickOutside);
     document.removeEventListener('keydown', this.handleKeyDown);
     
-    this.currentDropdown.classList.remove('slack-helper-refine-dropdown-expanded');
-    
-    setTimeout(() => {
-      if (this.currentDropdown) {
-        this.currentDropdown.remove();
-        this.currentDropdown = null;
-      }
-    }, 100);
+    // Always close immediately for better responsiveness
+    this.currentDropdown.remove();
+    this.currentDropdown = null;
   }
 
   /**
@@ -765,8 +825,6 @@ export class MessageHelper {
   extractTextFromInput(inputElement) {
     return SlackMessageFormatter.extractTextFromInput(inputElement);
   }
-
-
 
   /**
    * Show loading state on button

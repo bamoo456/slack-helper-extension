@@ -50,20 +50,34 @@
 
 /* Dropdown menu */
 .slack-helper-refine-dropdown {
-  position: absolute;
-  bottom: 100%;
-  right: 0;
-  margin-bottom: 4px;
+  position: fixed;
   background: white;
   border: 1px solid #e0e0e0;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   z-index: 10000;
   min-width: 200px;
+  max-width: calc(100vw - 40px);
+  max-height: calc(100vh - 40px);
   overflow: hidden;
+  overflow-y: auto;
   font-family: Slack-Lato, appleLogo, sans-serif;
-  transition: min-width 0.3s ease, max-width 0.3s ease;
   pointer-events: auto;
+}
+
+
+
+/* Responsive adjustments for smaller screens */
+@media (max-width: 768px) {
+  .slack-helper-refine-dropdown {
+    min-width: 280px;
+    max-width: calc(100vw - 20px);
+  }
+  
+  .slack-helper-refine-dropdown-expanded {
+    min-width: 300px;
+    max-width: calc(100vw - 20px);
+  }
 }
 
 /* Expanded dropdown for custom input */
