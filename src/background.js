@@ -341,13 +341,14 @@ chrome.runtime.onStartup.addListener(() => {
   // 啟動時不需要立即同步，等待用戶操作時再同步
 });
 
+
 // =========================
 // LLM API PROXY
 // =========================
 
 /**
- * Proxy LLM API requests (OpenAI-compatible) via background script to bypass
- * mixed-content restrictions when content scripts run on https origins.
+ * Proxy LLM API requests (OpenAI-compatible) via background script to 
+ * ensure the customized OpenAI compatible server is working
  * @param {Object} request - Message payload from content script
  * @returns {Promise<Object>} Parsed JSON response from the LLM server
  */
@@ -375,4 +376,3 @@ async function handleLLMRequest(request) {
 
   return response.json();
 }
-// ========================= 
