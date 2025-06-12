@@ -34,6 +34,11 @@ export class MessageHelper {
     this.initialized = false;
     this.translations = null;
     
+    // Add processing overlay state
+    this.currentProcessingOverlay = null;
+    this.currentProcessingBackdrop = null;
+    this.processingStartTime = null;
+    
     this.handleClickOutside = this.handleClickOutside.bind(this);
     this.handleKeyDown = this.handleKeyDown.bind(this);
     
@@ -864,13 +869,21 @@ export class MessageHelper {
     }
 
     try {
-      // Show loading state
+      // Show full-screen processing overlay
+      this.showProcessingOverlay(
+        this.t('processingCustomPrompt', 'Processing with custom prompt...'),
+        this.t('customPrompt', 'Custom Prompt'),
+        currentText
+      );
+      
+      // Also show button loading state as backup
       this.showLoadingState(button, this.t('processingCustomPrompt', 'Processing with custom prompt...'));
       
       // Process text with LLM service
       const processedText = await llmService.processText(currentText, 'custom', customPrompt);
       
-      // Hide loading state
+      // Hide processing overlay and loading state
+      this.hideProcessingOverlay();
       this.hideLoadingState(button);
       
       // Show result preview
@@ -878,6 +891,7 @@ export class MessageHelper {
       
     } catch (error) {
       console.error('Error processing custom prompt:', error);
+      this.hideProcessingOverlay();
       this.hideLoadingState(button);
       alert(`${this.t('errorProcessingRequest', 'Error processing your request')}: ${error.message}`);
     }
@@ -950,13 +964,21 @@ export class MessageHelper {
     }
 
     try {
-      // Show loading state
+      // Show full-screen processing overlay
+      this.showProcessingOverlay(
+        actionConfig.message,
+        action,
+        currentText
+      );
+      
+      // Also show button loading state as backup
       this.showLoadingState(button, actionConfig.message);
       
       // Process text with LLM service
       const processedText = await llmService.processText(currentText, actionConfig.action);
       
-      // Hide loading state
+      // Hide processing overlay and loading state
+      this.hideProcessingOverlay();
       this.hideLoadingState(button);
       
       // Show result preview
@@ -964,6 +986,7 @@ export class MessageHelper {
       
     } catch (error) {
       console.error('Error processing refine action:', error);
+      this.hideProcessingOverlay();
       this.hideLoadingState(button);
       alert(`${this.t('errorProcessingRequest', 'Error processing your request')}: ${error.message}`);
     }
@@ -1059,6 +1082,165 @@ export class MessageHelper {
     button.disabled = false;
     button.setAttribute('title', this.t('refineMessage', 'Refine Message'));
   }
+
+  /**
+   * Show full-screen processing overlay
+   */
+  showProcessingOverlay(message, actionType = '', originalText = '') {
+    // Hide any existing overlay first
+    this.hideProcessingOverlay();
+    
+    // Record start time for progress indication
+    this.processingStartTime = Date.now();
+    
+    // Create backdrop
+    const backdrop = document.createElement('div');
+    backdrop.className = 'slack-helper-processing-backdrop';
+    
+    // Create processing container
+    const overlay = document.createElement('div');
+    overlay.className = 'slack-helper-processing-overlay';
+    
+    // Create header with action type
+    const header = document.createElement('div');
+    header.className = 'slack-helper-processing-header';
+    
+    const icon = document.createElement('div');
+    icon.className = 'slack-helper-processing-icon';
+    icon.innerHTML = '✨';
+    
+    const title = document.createElement('div');
+    title.className = 'slack-helper-processing-title';
+    title.textContent = actionType || this.t('processing', 'Processing...');
+    
+    header.appendChild(icon);
+    header.appendChild(title);
+    
+    // Create main content area
+    const content = document.createElement('div');
+    content.className = 'slack-helper-processing-content';
+    
+    // Create animated loading spinner
+    const spinnerContainer = document.createElement('div');
+    spinnerContainer.className = 'slack-helper-processing-spinner-container';
+    
+    const spinner = document.createElement('div');
+    spinner.className = 'slack-helper-processing-spinner';
+    
+    spinnerContainer.appendChild(spinner);
+    
+    // Create status message
+    const statusMessage = document.createElement('div');
+    statusMessage.className = 'slack-helper-processing-message';
+    statusMessage.textContent = message;
+    
+    // Create elapsed time indicator
+    const timeIndicator = document.createElement('div');
+    timeIndicator.className = 'slack-helper-processing-time';
+    timeIndicator.textContent = '0s';
+    
+    // Show original text preview if provided
+    let originalPreview = null;
+    if (originalText && originalText.trim()) {
+      originalPreview = document.createElement('div');
+      originalPreview.className = 'slack-helper-processing-preview';
+      
+      const previewLabel = document.createElement('div');
+      previewLabel.className = 'slack-helper-processing-preview-label';
+      previewLabel.textContent = 'Processing text:';
+      
+      const previewText = document.createElement('div');
+      previewText.className = 'slack-helper-processing-preview-text';
+      previewText.textContent = originalText.length > 200 ? 
+        originalText.substring(0, 200) + '...' : originalText;
+      
+      originalPreview.appendChild(previewLabel);
+      originalPreview.appendChild(previewText);
+    }
+    
+    // Assemble content
+    content.appendChild(spinnerContainer);
+    content.appendChild(statusMessage);
+    content.appendChild(timeIndicator);
+    
+    if (originalPreview) {
+      content.appendChild(originalPreview);
+    }
+    
+    // Assemble overlay
+    overlay.appendChild(header);
+    overlay.appendChild(content);
+    
+    // Add to DOM
+    document.body.appendChild(backdrop);
+    backdrop.appendChild(overlay);
+    
+    // Store references
+    this.currentProcessingOverlay = overlay;
+    this.currentProcessingBackdrop = backdrop;
+    
+    // Start time updates
+    this.startProcessingAnimation(timeIndicator);
+    
+    // Prevent body scroll
+    document.body.style.overflow = 'hidden';
+  }
+
+  /**
+   * Start processing time updates
+   */
+  startProcessingAnimation(timeIndicator) {
+    if (!this.processingStartTime) return;
+    
+    const updateTime = () => {
+      if (!this.currentProcessingOverlay || !this.processingStartTime) return;
+      
+      const elapsed = Date.now() - this.processingStartTime;
+      const seconds = Math.floor(elapsed / 1000);
+      
+      // Update time indicator
+      timeIndicator.textContent = `${seconds}s`;
+      
+      // Continue animation
+      if (this.currentProcessingOverlay) {
+        requestAnimationFrame(updateTime);
+      }
+    };
+    
+    requestAnimationFrame(updateTime);
+  }
+
+
+
+  /**
+   * Hide processing overlay
+   */
+  hideProcessingOverlay() {
+    if (!this.currentProcessingOverlay) return;
+
+    // Keep local reference to backdrop before clearing
+    const backdrop = this.currentProcessingBackdrop;
+
+    // Restore body scroll
+    document.body.style.overflow = '';
+
+    // Fade out and remove backdrop
+    if (backdrop) {
+      backdrop.style.opacity = '0';
+      setTimeout(() => {
+        if (backdrop.parentElement) {
+          backdrop.remove();
+        }
+      }, 200);
+    }
+
+    // Clear references
+    this.currentProcessingOverlay = null;
+    this.currentProcessingBackdrop = null;
+    this.processingStartTime = null;
+  }
+
+
 
   /**
    * Update input text content
@@ -1172,14 +1354,7 @@ export class MessageHelper {
     }
   }
 
-  /**
-   * Insert formatted text into an element, handling emojis
-   */
-  insertFormattedText(element, text) {
-    // Simple approach: just set text content
-    // Slack will handle emoji rendering automatically
-    element.textContent = text;
-  }
+
 
   /**
    * Move cursor to end of contenteditable element
@@ -1610,6 +1785,9 @@ export class MessageHelper {
     
     // Clean up dropdown
     this.hideRefineDropdown();
+    
+    // Clean up processing overlay
+    this.hideProcessingOverlay();
     
     this.toolbarButtonInstances.forEach(button => {
       if (button.parentElement) {

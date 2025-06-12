@@ -299,3 +299,133 @@
     padding: 6px 10px;
   }
 }
+
+/* Processing Overlay Styles */
+.slack-helper-processing-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  z-index: 10001;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  box-sizing: border-box;
+  backdrop-filter: blur(4px);
+  transition: opacity 0.2s ease;
+}
+
+.slack-helper-processing-overlay {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  max-width: 500px;
+  width: 100%;
+  max-height: 80vh;
+  overflow: auto;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  animation: slack-helper-processing-appear 0.3s ease-out;
+  position: relative;
+}
+
+@keyframes slack-helper-processing-appear {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.slack-helper-processing-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 24px 24px 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.slack-helper-processing-icon {
+  font-size: 24px;
+  animation: slack-helper-processing-pulse 2s ease-in-out infinite;
+}
+
+@keyframes slack-helper-processing-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+.slack-helper-processing-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+}
+
+.slack-helper-processing-content {
+  padding: 24px;
+  text-align: center;
+}
+
+.slack-helper-processing-spinner-container {
+  margin-bottom: 24px;
+  display: flex;
+  justify-content: center;
+}
+
+.slack-helper-processing-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #f0f0f0;
+  border-top: 3px solid #007a5a;
+  border-radius: 50%;
+  animation: slack-helper-spin 1s linear infinite;
+}
+
+@keyframes slack-helper-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.slack-helper-processing-message {
+  font-size: 16px;
+  color: #555;
+  margin-bottom: 24px;
+  line-height: 1.4;
+}
+
+.slack-helper-processing-time {
+  font-size: 14px;
+  color: #888;
+  margin-bottom: 20px;
+}
+
+.slack-helper-processing-preview {
+  text-align: left;
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 20px;
+}
+
+.slack-helper-processing-preview-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #666;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.slack-helper-processing-preview-text {
+  font-size: 14px;
+  color: #333;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
