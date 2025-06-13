@@ -867,11 +867,7 @@ export class MessageHelper {
     
     // Check if prompt contains {MESSAGE} placeholder
     if (customPrompt.includes('{MESSAGE}')) {
-      if (!currentText.trim()) {
-        alert(this.t('pleaseTypeMessage', 'Please type a message first before applying custom prompt.'));
-        return;
-      }
-      // Replace {MESSAGE} with the current text
+      // Replace {MESSAGE} with the current text (empty string if no text)
       const processedPrompt = customPrompt.replace(/{MESSAGE}/g, currentText);
       
       try {
@@ -893,7 +889,7 @@ export class MessageHelper {
         this.hideLoadingState(button);
         
         // Show result preview
-        this.showResultPreview(inputElement, currentText, processedText, this.t('customPrompt', 'Custom Prompt'), customPrompt);
+        this.showResultPreview(inputElement, currentText, processedText, this.t('customPrompt', 'Custom Prompt'));
         
       } catch (error) {
         console.error('Error processing custom prompt:', error);
@@ -902,12 +898,7 @@ export class MessageHelper {
         alert(`${this.t('errorProcessingRequest', 'Error processing your request')}: ${error.message}`);
       }
     } else {
-      // If no {MESSAGE} placeholder, use traditional approach
-      if (!currentText.trim()) {
-        alert(this.t('pleaseTypeMessage', 'Please type a message first before applying custom prompt.'));
-        return;
-      }
-      
+      // If no {MESSAGE} placeholder, use traditional approach with current text or empty string
       try {
         // Show full-screen processing overlay
         this.showProcessingOverlay(
@@ -918,15 +909,15 @@ export class MessageHelper {
         // Also show button loading state as backup
         this.showLoadingState(button, this.t('processingCustomPrompt', 'Processing with custom prompt...'));
         
-        // Use current text with custom prompt as instruction
-        const processedText = await llmService.processText(currentText, 'custom', customPrompt);
+        // Use current text (or empty string) with custom prompt as instruction
+        const processedText = await llmService.processText(currentText || ' ', 'custom', customPrompt);
         
         // Hide processing overlay and loading state
         this.hideProcessingOverlay();
         this.hideLoadingState(button);
         
         // Show result preview
-        this.showResultPreview(inputElement, currentText, processedText, this.t('customPrompt', 'Custom Prompt'), customPrompt);
+        this.showResultPreview(inputElement, currentText, processedText, this.t('customPrompt', 'Custom Prompt'));
         
       } catch (error) {
         console.error('Error processing custom prompt:', error);
@@ -985,11 +976,6 @@ export class MessageHelper {
     if (!inputElement) return;
 
     const currentText = this.extractTextFromInput(inputElement);
-    
-    if (!currentText.trim()) {
-      alert(this.t('pleaseTypeMessageBeforeRefining', 'Please type a message first before refining it.'));
-      return;
-    }
 
     const actionMap = {
       [this.t('rephrase', 'Rephrase')]: { action: 'rephrase', message: this.t('rephrasing', 'Rephrasing your message...') },
@@ -1013,8 +999,8 @@ export class MessageHelper {
       // Also show button loading state as backup
       this.showLoadingState(button, actionConfig.message);
       
-      // Process text with LLM service
-      const processedText = await llmService.processText(currentText, actionConfig.action);
+      // Process text with LLM service (use empty string if no current text)
+      const processedText = await llmService.processText(currentText || ' ', actionConfig.action);
       
       // Hide processing overlay and loading state
       this.hideProcessingOverlay();
@@ -1405,7 +1391,7 @@ export class MessageHelper {
     header.innerHTML = `
       <div class="slack-helper-preview-title">
         <span class="slack-helper-preview-icon">✨</span>
-        <span>${actionType}${customPrompt ? `: ${customPrompt}` : ''}</span>
+        <span>${actionType}</span>
       </div>
       <button class="slack-helper-preview-close" title="Close">×</button>
     `;
