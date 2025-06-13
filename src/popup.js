@@ -167,50 +167,52 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // 更新頁面文字
   function updatePageTexts(translations) {
-    // 更新標題
-    const titleElement = document.querySelector('h1');
-    if (titleElement) {
-      titleElement.textContent = translations.title;
+    // 通用的 data-i18n 處理函數
+    function updateElementsWithDataI18n() {
+      // 處理普通的 data-i18n 屬性
+      const elementsWithI18n = document.querySelectorAll('[data-i18n]');
+      elementsWithI18n.forEach(element => {
+        const key = element.getAttribute('data-i18n');
+        const value = getNestedValue(translations, key);
+        if (value) {
+          element.textContent = value;
+        }
+      });
+
+      // 處理 data-i18n-html 屬性（允許 HTML 內容）
+      const elementsWithI18nHtml = document.querySelectorAll('[data-i18n-html]');
+      elementsWithI18nHtml.forEach(element => {
+        const key = element.getAttribute('data-i18n-html');
+        const value = getNestedValue(translations, key);
+        if (value) {
+          element.innerHTML = value;
+        }
+      });
+
+      // 處理 data-i18n-placeholder 屬性
+      const elementsWithI18nPlaceholder = document.querySelectorAll('[data-i18n-placeholder]');
+      elementsWithI18nPlaceholder.forEach(element => {
+        const key = element.getAttribute('data-i18n-placeholder');
+        const value = getNestedValue(translations, key);
+        if (value) {
+          element.placeholder = value;
+        }
+      });
     }
 
-    // 更新描述
-    const descriptionElement = document.querySelector('.description p');
-    if (descriptionElement) {
-      descriptionElement.textContent = translations.description;
+    // 輔助函數：獲取嵌套對象的值
+    function getNestedValue(obj, path) {
+      return path.split('.').reduce((current, key) => current && current[key], obj);
     }
+
+    // 執行通用更新
+    updateElementsWithDataI18n();
 
     // 更新語言選項
     updateLanguageOptions(translations);
 
-    // 更新標籤頁
-    const tabButtons = document.querySelectorAll('.tab-button');
-    tabButtons.forEach((button, index) => {
-      const tabKey = button.getAttribute('data-tab');
-      if (translations.tabs && translations.tabs[tabKey]) {
-        button.textContent = translations.tabs[tabKey];
-      }
-    });
-
-    // 更新 AI 提示詞區域
-    updatePromptSectionTexts(translations);
-
-    // 更新滾動設定區域
-    updateScrollSectionTexts(translations);
-
-    // 更新同步設定區域
-    updateSyncSectionTexts(translations);
-
-    // 更新 LLM 設定區域
-    updateLLMSectionTexts(translations);
-
-    // 更新使用說明
-    updateUsageGuideTexts(translations);
-
-    // 更新狀態和提示
-    updateStatusTexts(translations);
-
-    // 更新模態框文字
-    updateModalTexts(translations);
+    // 特殊處理需要動態更新的內容
+    updateSpecialTexts(translations);
 
     // 重新載入當前的 prompt 顯示（使用新語言）
     chrome.storage.local.get(['customSystemPrompt'], function(result) {
@@ -227,224 +229,39 @@ document.addEventListener('DOMContentLoaded', function() {
   function updateLanguageOptions(translations) {
     const languageOptions = document.querySelectorAll('#languageSelect option');
     languageOptions.forEach(option => {
-      const value = option.value;
-      if (value === 'zh-TW') {
-        option.textContent = '繁體中文';
-      } else if (value === 'en') {
-        option.textContent = 'English';
+      const i18nKey = option.getAttribute('data-i18n');
+      if (i18nKey) {
+        const value = getNestedValue(translations, i18nKey);
+        if (value) {
+          option.textContent = value;
+        }
       }
     });
   }
 
-  // 更新模態框文字
-  function updateModalTexts(translations) {
-    const modalSection = translations.modal;
-    if (!modalSection) return;
-
-    // 更新同步模態框
-    const syncingTitle = document.querySelector('.modal-header h2');
-    if (syncingTitle) syncingTitle.textContent = modalSection.syncingTitle;
-
-    const syncMessage = document.getElementById('syncMessage');
-    if (syncMessage) syncMessage.textContent = modalSection.syncMessage;
-
-    const cancelSyncBtn = document.getElementById('cancelSyncBtn');
-    if (cancelSyncBtn) cancelSyncBtn.textContent = modalSection.cancelSync;
-
-    // 更新步驟文字
-    const steps = [
-      { id: 'step1', key: 'step1' },
-      { id: 'step2', key: 'step2' },
-      { id: 'step3', key: 'step3' },
-      { id: 'step4', key: 'step4' }
-    ];
-
-    steps.forEach(step => {
-      const stepElement = document.querySelector(`#${step.id} .step-text`);
-      if (stepElement && modalSection[step.key]) {
-        stepElement.textContent = modalSection[step.key];
-      }
-    });
-
-    // 更新警告文字
-    const syncWarnings = document.querySelectorAll('.sync-warning p');
-    if (syncWarnings[0] && modalSection.warning1) {
-      syncWarnings[0].textContent = modalSection.warning1;
-    }
-    if (syncWarnings[1] && modalSection.warning2) {
-      syncWarnings[1].textContent = modalSection.warning2;
-    }
-
-    // 更新計時器文字（如果存在）
-    const syncTimer = document.getElementById('syncTimer');
-    if (syncTimer && modalSection.syncTimer) {
-      const currentTime = syncTimer.textContent.match(/\d+/);
-      if (currentTime) {
-        syncTimer.textContent = modalSection.syncTimer.replace('{{time}}', currentTime[0]);
-      }
-    }
+  // 輔助函數：獲取嵌套對象的值
+  function getNestedValue(obj, path) {
+    return path.split('.').reduce((current, key) => current && current[key], obj);
   }
 
-  // 更新 AI 提示詞區域文字
-  function updatePromptSectionTexts(translations) {
-    const promptSection = translations.prompt;
-    if (!promptSection) return;
-
-    // 更新標題和提示
-    const promptTitle = document.querySelector('#prompt-tab h3');
-    if (promptTitle) promptTitle.textContent = promptSection.title;
-
-    const promptHint = document.querySelector('.prompt-hint');
-    if (promptHint) promptHint.innerHTML = promptSection.hint;
-
-    const currentPromptTitle = document.querySelector('.current-prompt-preview h4');
-    if (currentPromptTitle) currentPromptTitle.textContent = promptSection.currentPrompt;
-
-    // 更新按鈕
-    if (savePromptBtn) savePromptBtn.textContent = promptSection.save;
-    if (resetPromptBtn) resetPromptBtn.textContent = promptSection.reset;
+  // 處理需要特殊更新的文字內容
+  function updateSpecialTexts(translations) {
+    // 這裡可以添加任何需要特殊處理的文字更新邏輯
+    // 大部分內容現在都通過 data-i18n 自動處理了
     
-
-    // 更新標籤和佔位符
-    const promptLabel = document.querySelector('label[for="systemPromptInput"]');
-    if (promptLabel) promptLabel.textContent = promptSection.editLabel;
-
-    if (systemPromptInput) {
-      systemPromptInput.placeholder = promptSection.placeholder;
-    }
-
-    // 更新 prompt 顯示區域的預設文字
-    const promptPlaceholder = document.querySelector('.prompt-placeholder');
-    if (promptPlaceholder) {
-      promptPlaceholder.textContent = promptSection.loading || '載入中...';
-    }
+    // 更新現有的模型列表項目中的按鈕文字
+    updateExistingModelListTexts(translations.llm || {});
   }
 
-  // 更新滾動設定區域文字
-  function updateScrollSectionTexts(translations) {
-    const scrollSection = translations.scroll;
-    if (!scrollSection) return;
 
-    const scrollTitle = document.querySelector('#scroll-tab h3');
-    if (scrollTitle) scrollTitle.textContent = scrollSection.title;
 
-    const scrollHint = document.querySelector('#scroll-tab .settings-hint');
-    if (scrollHint) scrollHint.textContent = scrollSection.hint;
 
-    // 更新設定組標題
-    const settingsGroups = document.querySelectorAll('#scroll-tab .settings-group h4');
-    if (settingsGroups[0]) settingsGroups[0].textContent = scrollSection.basicSettings;
-    if (settingsGroups[1]) settingsGroups[1].textContent = scrollSection.advancedSettings;
 
-    // 更新標籤和描述
-    const labels = {
-      'scrollDelay': scrollSection.scrollDelay,
-      'scrollStep': scrollSection.scrollStep,
-      'minScrollAmount': scrollSection.minScrollAmount,
-      'maxScrollAttempts': scrollSection.maxScrollAttempts,
-      'noMaxNewMessagesCount': scrollSection.noMaxNewMessagesCount
-    };
 
-    Object.keys(labels).forEach(id => {
-      const label = document.querySelector(`label[for="${id}"]`);
-      if (label) label.textContent = labels[id];
-    });
 
-    // 更新描述文字
-    const descriptions = {
-      'scrollDelay': scrollSection.scrollDelayDesc,
-      'scrollStep': scrollSection.scrollStepDesc,
-      'minScrollAmount': scrollSection.minScrollAmountDesc,
-      'maxScrollAttempts': scrollSection.maxScrollAttemptsDesc,
-      'noMaxNewMessagesCount': scrollSection.noMaxNewMessagesCountDesc
-    };
 
-    Object.keys(descriptions).forEach(id => {
-      const settingRow = document.querySelector(`#${id}`).closest('.setting-row');
-      const smallElement = settingRow?.querySelector('small');
-      if (smallElement && descriptions[id]) {
-        smallElement.textContent = descriptions[id];
-      }
-    });
 
-    // 更新按鈕
-    const saveScrollBtn = document.getElementById('saveScrollSettings');
-    const resetScrollBtn = document.getElementById('resetScrollSettings');
-    if (saveScrollBtn) saveScrollBtn.textContent = scrollSection.save;
-    if (resetScrollBtn) resetScrollBtn.textContent = scrollSection.reset;
-  }
 
-  // 更新同步設定區域文字
-  function updateSyncSectionTexts(translations) {
-    const syncSection = translations.sync;
-    if (!syncSection) return;
-
-    const syncTitle = document.querySelector('#sync-tab h3');
-    if (syncTitle) syncTitle.textContent = syncSection.title;
-
-    const syncHint = document.querySelector('#sync-tab .settings-hint');
-    if (syncHint) syncHint.textContent = syncSection.hint;
-
-    // 更新設定組標題
-    const settingsGroups = document.querySelectorAll('#sync-tab .settings-group h4');
-    if (settingsGroups[0]) settingsGroups[0].textContent = syncSection.syncStatus;
-    if (settingsGroups[1]) settingsGroups[1].textContent = syncSection.availableModels;
-    if (settingsGroups[2]) settingsGroups[2].textContent = syncSection.syncExplanation;
-
-    // 更新按鈕
-    if (manualSyncPopupBtn) manualSyncPopupBtn.textContent = syncSection.manualSync;
-    if (checkSyncStatusBtn) checkSyncStatusBtn.textContent = syncSection.checkStatus;
-    if (refreshModelsBtn) refreshModelsBtn.textContent = syncSection.refreshModels;
-
-    // 更新同步說明區域的文字
-    const syncIntervalInfos = document.querySelectorAll('#sync-tab .sync-interval-info');
-    if (syncIntervalInfos[0]) {
-      const span = syncIntervalInfos[0].querySelector('span');
-      const small = syncIntervalInfos[0].querySelector('small');
-      if (span) span.textContent = syncSection.manualSyncMode;
-      if (small) small.textContent = syncSection.manualSyncModeDesc;
-    }
-    if (syncIntervalInfos[1]) {
-      const span = syncIntervalInfos[1].querySelector('span');
-      const small = syncIntervalInfos[1].querySelector('small');
-      if (span) span.textContent = syncSection.syncProcess;
-      if (small) small.textContent = syncSection.syncProcessDesc;
-    }
-
-    // 更新模型列表區域的預設文字
-    const modelsPlaceholder = document.querySelector('.models-placeholder');
-    if (modelsPlaceholder && modelsPlaceholder.textContent.includes('載入')) {
-      modelsPlaceholder.textContent = syncSection.loadingModels;
-    }
-  }
-
-  // 更新使用說明文字
-  function updateUsageGuideTexts(translations) {
-    const usageSection = translations.usage;
-    if (!usageSection) return;
-
-    const usageTitle = document.querySelector('.usage-guide h3');
-    if (usageTitle) usageTitle.textContent = usageSection.title;
-
-    const usageSteps = document.querySelectorAll('.usage-guide li');
-    const stepKeys = ['step1', 'step2', 'step3', 'step4', 'step5', 'step6'];
-    
-    usageSteps.forEach((step, index) => {
-      if (usageSection[stepKeys[index]]) {
-        step.textContent = usageSection[stepKeys[index]];
-      }
-    });
-  }
-
-  // 更新狀態和提示文字
-  function updateStatusTexts(translations) {
-    const statusSection = translations.status;
-    if (!statusSection) return;
-
-    // 更新提示文字
-    const footerTip = document.querySelector('.footer p');
-    if (footerTip) footerTip.textContent = statusSection.tip;
-  }
 
   // 更新 LLM 設定區域文字
   function updateLLMSectionTexts(translations) {

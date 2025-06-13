@@ -150,6 +150,14 @@
 
     "userModelsTitle": "📋 支援的模型管理",
     "userModelsHint": "管理您要支援的模型列表。這些模型將在訊息增強功能中可供選擇。",
+    "openaiModelsTitle": "🤖 OpenAI 模型",
+    "openaiModelPlaceholder": "輸入 OpenAI 模型名稱（例如：gpt-4, gpt-3.5-turbo）",
+    "openaiAddModelDesc": "輸入要支援的 OpenAI 模型名稱",
+    "openaiCurrentModelsTitle": "📝 當前 OpenAI 模型：",
+    "compatibleModelsTitle": "🔧 OpenAI Compatible 模型",
+    "compatibleModelPlaceholder": "輸入 Compatible 模型名稱（例如：claude-3-sonnet, llama-2）",
+    "compatibleAddModelDesc": "輸入要支援的 OpenAI Compatible 模型名稱",
+    "compatibleCurrentModelsTitle": "📝 當前 Compatible 模型：",
     "addModelPlaceholder": "輸入模型名稱（例如：gpt-4, claude-3-sonnet）",
     "addModelBtn": "➕ 添加模型",
     "addModelDesc": "輸入要支援的模型名稱，支援 OpenAI 和其他相容 API 的模型",
@@ -162,6 +170,9 @@
     "defaultModelSelectLabel": "預設模型",
     "defaultModelSelectPlaceholder": "選擇預設模型...",
     "defaultModelSelectDesc": "選擇訊息增強功能的預設模型",
+    "globalDefaultModelLabel": "全局預設模型",
+    "globalDefaultModelSelectPlaceholder": "選擇全局預設模型...",
+    "globalDefaultModelSelectDesc": "選擇訊息增強功能的全局預設模型（跨所有提供商）",
     "setDefaultBtn": "設為預設",
     "removeBtn": "移除",
     "defaultBadge": "預設",
@@ -251,7 +262,7 @@
     "step3": "檢測可用模型...",
     "step4": "保存模型列表...",
     "syncMessage": "正在開啟 Gemini 頁面進行模型同步，請稍候...",
-    "syncTimer": "已用時間: {{time}} 秒",
+    "syncTimer": "已用時間: 0 秒",
     "warning1": "⚠️ 同步過程中請勿關閉此視窗",
     "warning2": "🔄 同步完成後會自動關閉 Gemini 頁面",
     "cancelSync": "❌ 取消同步"
@@ -491,6 +502,7 @@
   "language": {
     "switch": "🌐 切換語言",
     "current": "繁體中文",
-    "traditionalChinese": "繁體中文"
+    "traditionalChinese": "繁體中文",
+    "english": "English"
   }
 }

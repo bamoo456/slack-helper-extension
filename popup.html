@@ -8,62 +8,63 @@
 <body>
   <div class="container">
     <div class="header-section">
-      <h1>Slack Thread Summary Tool</h1>
+      <h1 data-i18n="title">Slack Thread Summary Tool</h1>
       
       <!-- 語言切換選單 -->
       <div class="language-selector">
         <label for="languageSelect">🌐</label>
         <select id="languageSelect" class="language-dropdown">
-          <option value="zh-TW">繁體中文</option>
-          <option value="en">English</option>
+          <option value="zh-TW" data-i18n="language.traditionalChinese">繁體中文</option>
+          <option value="en" data-i18n="language.english">English</option>
         </select>
       </div>
     </div>
     
     <div class="description">
-      <p>在 Slack 討論串中使用「📝 摘要此討論串」按鈕來自動提取訊息並在 Gemini 中生成摘要。</p>
+      <p data-i18n="description">在 Slack 討論串中使用「📝 摘要此討論串」按鈕來自動提取訊息並在 Gemini 中生成摘要。</p>
     </div>
     
 
 
     <!-- 設定標籤頁 -->
     <div class="settings-tabs">
-      <button class="tab-button active" data-tab="prompt">📝 AI 提示詞</button>
-      <button class="tab-button" data-tab="scroll">⚙️ 滾動設定</button>
-      <button class="tab-button" data-tab="sync">🔄 模型同步</button>
-      <button class="tab-button" data-tab="llm">🤖 LLM API 設定</button>
+      <button class="tab-button active" data-tab="prompt" data-i18n="tabs.prompt">📝 AI 提示詞</button>
+      <button class="tab-button" data-tab="scroll" data-i18n="tabs.scroll">⚙️ 滾動設定</button>
+      <button class="tab-button" data-tab="sync" data-i18n="tabs.sync">🔄 模型同步</button>
+      <button class="tab-button" data-tab="llm" data-i18n="tabs.llm">🤖 LLM API 設定</button>
     </div>
 
     <!-- AI提示詞 設定區域 -->
     <div class="tab-content active" id="prompt-tab">
       <div class="system-prompt-section">
-        <h3>📝 自定義 AI提示詞 </h3>
-        <div class="prompt-hint" style="font-size: 13px; color: #666; margin-bottom: 8px;">
+        <h3 data-i18n="prompt.title">📝 自定義 AI提示詞 </h3>
+        <div class="prompt-hint" style="font-size: 13px; color: #666; margin-bottom: 8px;" data-i18n-html="prompt.hint">
           ※ 在您的 AI提示詞 中加入 <code>{MESSAGES}</code>，系統會自動將其替換為需要摘要的 Slack 訊息內容。
         </div>
         
         <!-- 當前已保存的 Prompt 預覽區域 -->
         <div class="current-prompt-preview">
-          <h4>📋 當前已保存的 Prompt：</h4>
+          <h4 data-i18n="prompt.currentPrompt">📋 當前已保存的 Prompt：</h4>
           <div id="currentPromptDisplay" class="prompt-display">
-            <div class="prompt-placeholder">載入中...</div>
+            <div class="prompt-placeholder" data-i18n="prompt.loading">載入中...</div>
           </div>
           <div class="prompt-info">
-            <span id="promptLength">字數：0</span>
-            <span id="promptStatus">狀態：未設定</span>
+            <span id="promptLength" data-i18n="prompt.wordCountDefault">字數：0</span>
+            <span id="promptStatus" data-i18n="prompt.statusDefault">狀態：未設定</span>
           </div>
         </div>
         
         <div class="prompt-controls">
-          <label for="systemPromptInput">編輯 AI提示詞：</label>
+          <label for="systemPromptInput" data-i18n="prompt.editLabel">編輯 AI提示詞：</label>
           <textarea 
             id="systemPromptInput" 
+            data-i18n-placeholder="prompt.placeholder"
             placeholder="輸入您的自定義 AI提示詞，或留空使用預設設置..."
             rows="6"
           ></textarea>
           <div class="prompt-buttons">
-            <button id="savePromptBtn" class="btn-primary">💾 保存設置</button>
-            <button id="resetPromptBtn" class="btn-secondary">🔄 重置為預設</button>
+            <button id="savePromptBtn" class="btn-primary" data-i18n="prompt.save">💾 保存設置</button>
+            <button id="resetPromptBtn" class="btn-secondary" data-i18n="prompt.reset">🔄 重置為預設</button>
           </div>
           <div id="promptActionStatus" class="prompt-status"></div>
         </div>
@@ -73,43 +74,43 @@
     <!-- 滾動設定區域 -->
     <div class="tab-content" id="scroll-tab">
       <div class="scroll-settings-section">
-        <h3>⚙️ 討論串訊息讀取設定</h3>
-        <div class="settings-hint" style="font-size: 13px; color: #666; margin-bottom: 16px;">
+        <h3 data-i18n="scroll.title">⚙️ 討論串訊息讀取設定</h3>
+        <div class="settings-hint" style="font-size: 13px; color: #666; margin-bottom: 16px;" data-i18n="scroll.hint">
           調整這些參數來優化訊息收集的速度和準確性。建議先使用預設值，如有需要再進行調整。
         </div>
 
         <!-- 基本設定 -->
         <div class="settings-group">
-          <h4>基本滾動設定</h4>
+          <h4 data-i18n="scroll.basicSettings">基本滾動設定</h4>
           <div class="setting-row">
-            <label for="scrollDelay">標準滾動延遲 (毫秒)</label>
+            <label for="scrollDelay" data-i18n="scroll.scrollDelay">標準滾動延遲 (毫秒)</label>
             <input type="number" id="scrollDelay" min="100" max="2000" step="50" value="400">
-            <small>控制標準滾動的等待時間</small>
+            <small data-i18n="scroll.scrollDelayDesc">控制標準滾動的等待時間</small>
           </div>
           <div class="setting-row">
-            <label for="scrollStep">標準滾動步長 (像素)</label>
+            <label for="scrollStep" data-i18n="scroll.scrollStep">標準滾動步長 (像素)</label>
             <input type="number" id="scrollStep" min="100" max="2000" step="50" value="600">
-            <small>每次標準滾動的距離</small>
+            <small data-i18n="scroll.scrollStepDesc">每次標準滾動的距離</small>
           </div>
           <div class="setting-row">
-            <label for="minScrollAmount">最小滾動距離 (像素)</label>
+            <label for="minScrollAmount" data-i18n="scroll.minScrollAmount">最小滾動距離 (像素)</label>
             <input type="number" id="minScrollAmount" min="50" max="500" step="10" value="100">
-            <small>確保每次滾動的最小距離</small>
+            <small data-i18n="scroll.minScrollAmountDesc">確保每次滾動的最小距離</small>
           </div>
         </div>
 
         <!-- 高級設定 -->
         <div class="settings-group">
-          <h4>高級設定</h4>
+          <h4 data-i18n="scroll.advancedSettings">高級設定</h4>
           <div class="setting-row">
-            <label for="maxScrollAttempts">最大滾動次數</label>
+            <label for="maxScrollAttempts" data-i18n="scroll.maxScrollAttempts">最大滾動次數</label>
             <input type="number" id="maxScrollAttempts" min="10" max="1000" step="10" value="300">
-            <small>防止無限滾動的安全機制</small>
+            <small data-i18n="scroll.maxScrollAttemptsDesc">防止無限滾動的安全機制</small>
           </div>
           <div class="setting-row">
-            <label for="noMaxNewMessagesCount">停止滾動閾值</label>
+            <label for="noMaxNewMessagesCount" data-i18n="scroll.noMaxNewMessagesCount">停止滾動閾值</label>
             <input type="number" id="noMaxNewMessagesCount" min="3" max="50" step="1" value="12">
-            <small>連續多少次無新訊息後停止滾動</small>
+            <small data-i18n="scroll.noMaxNewMessagesCountDesc">連續多少次無新訊息後停止滾動</small>
           </div>
         </div>
 
@@ -117,8 +118,8 @@
 
         <!-- 操作按鈕 -->
         <div class="scroll-settings-actions">
-          <button id="saveScrollSettings" class="btn-primary">💾 保存設定</button>
-          <button id="resetScrollSettings" class="btn-secondary">🔄 重置為預設值</button>
+          <button id="saveScrollSettings" class="btn-primary" data-i18n="scroll.save">💾 保存設定</button>
+          <button id="resetScrollSettings" class="btn-secondary" data-i18n="scroll.reset">🔄 重置為預設值</button>
         </div>
         
         <div id="scrollActionStatus" class="scroll-status"></div>
@@ -128,24 +129,24 @@
     <!-- 模型同步設定區域 -->
     <div class="tab-content" id="sync-tab">
       <div class="sync-settings-section">
-        <h3>🔄 Gemini 模型同步</h3>
-        <div class="settings-hint" style="font-size: 13px; color: #666; margin-bottom: 16px;">
+        <h3 data-i18n="sync.title">🔄 Gemini 模型同步</h3>
+        <div class="settings-hint" style="font-size: 13px; color: #666; margin-bottom: 16px;" data-i18n="sync.hint">
           手動管理 Gemini 模型同步。使用手動同步來獲取最新的可用模型列表。
         </div>
 
         <!-- 同步狀態顯示 -->
         <div class="settings-group">
-          <h4>🔍 同步狀態</h4>
+          <h4 data-i18n="sync.syncStatus">🔍 同步狀態</h4>
           <div class="sync-status-container">
             <div id="syncStatusDisplay" class="status-display">
               <span id="syncStatusIcon">⏳</span>
-              <span id="syncStatusText">檢查同步狀態中...</span>
+              <span id="syncStatusText" data-i18n="sync.checking">檢查同步狀態中...</span>
             </div>
             <div class="sync-actions">
-              <button id="manualSyncPopupBtn" class="btn-primary">
+              <button id="manualSyncPopupBtn" class="btn-primary" data-i18n="sync.manualSync">
                 🔄 手動同步模型
               </button>
-              <button id="checkSyncStatusBtn" class="btn-tertiary">
+              <button id="checkSyncStatusBtn" class="btn-tertiary" data-i18n="sync.checkStatus">
                 🔍 檢查狀態
               </button>
             </div>
@@ -154,16 +155,16 @@
 
         <!-- 可用模型顯示 -->
         <div class="settings-group">
-          <h4>📋 可用模型列表</h4>
+          <h4 data-i18n="sync.availableModels">📋 可用模型列表</h4>
           <div class="models-list-container">
             <div id="modelsListDisplay" class="models-display">
-              <div class="models-placeholder">載入模型列表中...</div>
+              <div class="models-placeholder" data-i18n="sync.loadingModels">載入模型列表中...</div>
             </div>
             <div class="models-info">
-              <span id="modelsCount">模型數量：檢查中</span>
-              <span id="modelsLastUpdate">最後更新：檢查中</span>
+              <span id="modelsCount" data-i18n="sync.modelsCountChecking">模型數量：檢查中</span>
+              <span id="modelsLastUpdate" data-i18n="sync.lastUpdateChecking">最後更新：檢查中</span>
             </div>
-            <button id="refreshModelsBtn" class="btn-secondary">
+            <button id="refreshModelsBtn" class="btn-secondary" data-i18n="sync.refreshModels">
               📋 重新載入模型列表
             </button>
           </div>
@@ -171,17 +172,17 @@
 
         <!-- 手動同步說明 -->
         <div class="settings-group">
-          <h4>💡 同步說明</h4>
+          <h4 data-i18n="sync.syncExplanation">💡 同步說明</h4>
           <div class="setting-row">
             <div class="sync-interval-info">
-              <span>手動同步模式</span>
-              <small>擴展不會自動同步模型，需要手動觸發同步以獲取最新模型列表</small>
+              <span data-i18n="sync.manualSyncMode">手動同步模式</span>
+              <small data-i18n="sync.manualSyncModeDesc">擴展不會自動同步模型，需要手動觸發同步以獲取最新模型列表</small>
             </div>
           </div>
           <div class="setting-row">
             <div class="sync-interval-info">
-              <span>同步過程</span>
-              <small>同步時會開啟新的 Gemini 視窗來檢測可用模型，完成後自動關閉</small>
+              <span data-i18n="sync.syncProcess">同步過程</span>
+              <small data-i18n="sync.syncProcessDesc">同步時會開啟新的 Gemini 視窗來檢測可用模型，完成後自動關閉</small>
             </div>
           </div>
         </div>
@@ -193,115 +194,115 @@
     <!-- LLM API 設定區域 -->
     <div class="tab-content" id="llm-tab">
       <div class="llm-settings-section">
-        <h3>🤖 LLM API 設定</h3>
-        <div class="settings-hint" style="font-size: 13px; color: #666; margin-bottom: 16px;">
+        <h3 data-i18n="llm.title">🤖 LLM API 設定</h3>
+        <div class="settings-hint" style="font-size: 13px; color: #666; margin-bottom: 16px;" data-i18n="llm.hint">
           配置 LLM API 提供商以啟用訊息增強功能（重新表達、改進、修正語法等）。
         </div>
 
         <!-- 提供商選擇 -->
         <div class="settings-group">
-          <h4>🔧 API 提供商</h4>
+          <h4 data-i18n="llm.apiProvider">🔧 API 提供商</h4>
           <div class="setting-row">
-            <label for="llmProviderSelect">選擇 LLM 提供商</label>
+            <label for="llmProviderSelect" data-i18n="llm.selectProvider">選擇 LLM 提供商</label>
             <select id="llmProviderSelect" class="llm-provider-dropdown">
-              <option value="">請選擇提供商...</option>
-              <option value="openai">OpenAI Settings</option>
-              <option value="openai-compatible">OpenAI Compatible Settings</option>
+              <option value="" data-i18n="llm.selectProviderPlaceholder">請選擇提供商...</option>
+              <option value="openai" data-i18n="llm.openaiSettings">OpenAI Settings</option>
+              <option value="openai-compatible" data-i18n="llm.openaiCompatibleSettings">OpenAI Compatible Settings</option>
             </select>
-            <small>選擇您要使用的 LLM API 提供商</small>
+            <small data-i18n="llm.selectProviderDesc">選擇您要使用的 LLM API 提供商</small>
           </div>
         </div>
 
         <!-- OpenAI 設定 -->
         <div class="settings-group llm-provider-config" id="openai-config" style="display: none;">
-          <h4>🔑 OpenAI API 設定</h4>
+          <h4 data-i18n="llm.openaiConfig">🔑 OpenAI API 設定</h4>
           <div class="setting-row">
-            <label for="openaiApiKey">OpenAI API Key</label>
-            <input type="password" id="openaiApiKey" placeholder="sk-..." class="llm-input">
-            <small>輸入您的 OpenAI API Key（將安全儲存在本地）</small>
+            <label for="openaiApiKey" data-i18n="llm.openaiApiKey">OpenAI API Key</label>
+            <input type="password" id="openaiApiKey" data-i18n-placeholder="llm.openaiApiKeyPlaceholder" placeholder="sk-..." class="llm-input">
+            <small data-i18n="llm.openaiApiKeyDesc">輸入您的 OpenAI API Key（將安全儲存在本地）</small>
           </div>
         </div>
 
         <!-- OpenAI Compatible 設定 -->
         <div class="settings-group llm-provider-config" id="openai-compatible-config" style="display: none;">
-          <h4>🔧 OpenAI Compatible API 設定</h4>
+          <h4 data-i18n="llm.compatibleConfig">🔧 OpenAI Compatible API 設定</h4>
           <div class="setting-row">
-            <label for="compatibleBaseUrl">API Base URL</label>
-            <input type="url" id="compatibleBaseUrl" placeholder="https://your-api-server.com/v1" class="llm-input">
-            <small>輸入您的 API 服務器基礎 URL</small>
+            <label for="compatibleBaseUrl" data-i18n="llm.compatibleBaseUrl">API Base URL</label>
+            <input type="url" id="compatibleBaseUrl" data-i18n-placeholder="llm.compatibleBaseUrlPlaceholder" placeholder="https://your-api-server.com/v1" class="llm-input">
+            <small data-i18n="llm.compatibleBaseUrlDesc">輸入您的 API 服務器基礎 URL</small>
           </div>
 
           <div class="setting-row">
-            <label for="compatibleHeaders">自定義 Headers（JSON 格式，可選）</label>
-            <textarea id="compatibleHeaders" placeholder='{"Authorization": "Bearer your-token", "Custom-Header": "value"}' rows="3" class="llm-textarea"></textarea>
-            <small>輸入額外的 HTTP Headers（JSON 格式）</small>
+            <label for="compatibleHeaders" data-i18n="llm.compatibleHeaders">自定義 Headers（JSON 格式，可選）</label>
+            <textarea id="compatibleHeaders" data-i18n-placeholder="llm.compatibleHeadersPlaceholder" placeholder='{"Authorization": "Bearer your-token", "Custom-Header": "value"}' rows="3" class="llm-textarea"></textarea>
+            <small data-i18n="llm.compatibleHeadersDesc">輸入額外的 HTTP Headers（JSON 格式）</small>
           </div>
           <div class="setting-row">
-            <label for="compatibleParams">自定義請求參數（JSON 格式，可選）</label>
-            <textarea id="compatibleParams" placeholder='{"temperature": 0.7, "max_tokens": 500}' rows="3" class="llm-textarea"></textarea>
-            <small>輸入額外的請求參數（JSON 格式）</small>
+            <label for="compatibleParams" data-i18n="llm.compatibleParams">自定義請求參數（JSON 格式，可選）</label>
+            <textarea id="compatibleParams" data-i18n-placeholder="llm.compatibleParamsPlaceholder" placeholder='{"temperature": 0.7, "max_tokens": 500}' rows="3" class="llm-textarea"></textarea>
+            <small data-i18n="llm.compatibleParamsDesc">輸入額外的請求參數（JSON 格式）</small>
           </div>
         </div>
 
         <!-- 用戶指定模型管理 -->
         <div class="settings-group" id="user-models-section" style="display: none;">
-          <h4>📋 支援的模型管理</h4>
-          <div class="settings-hint" style="font-size: 13px; color: #666; margin-bottom: 12px;">
+          <h4 data-i18n="llm.userModelsTitle">📋 支援的模型管理</h4>
+          <div class="settings-hint" style="font-size: 13px; color: #666; margin-bottom: 12px;" data-i18n="llm.userModelsHint">
             管理您要支援的模型列表。這些模型將在訊息增強功能中可供選擇。
           </div>
           
           <!-- OpenAI 模型管理 -->
           <div class="provider-models-section" id="openai-models-section" style="display: none;">
-            <h5>🤖 OpenAI 模型</h5>
+            <h5 data-i18n="llm.openaiModelsTitle">🤖 OpenAI 模型</h5>
             
             <!-- 添加新模型 -->
             <div class="add-model-container">
               <div class="add-model-form">
                 <div class="model-input-group">
-                  <input type="text" id="newOpenaiModelName" placeholder="輸入 OpenAI 模型名稱（例如：gpt-4, gpt-3.5-turbo）" class="model-input">
-                  <button id="addOpenaiModelBtn" class="btn-add-model">➕ 添加模型</button>
+                  <input type="text" id="newOpenaiModelName" data-i18n-placeholder="llm.openaiModelPlaceholder" placeholder="輸入 OpenAI 模型名稱（例如：gpt-4, gpt-3.5-turbo）" class="model-input">
+                  <button id="addOpenaiModelBtn" class="btn-add-model" data-i18n="llm.addModelBtn">➕ 添加模型</button>
                 </div>
-                <small>輸入要支援的 OpenAI 模型名稱</small>
+                <small data-i18n="llm.openaiAddModelDesc">輸入要支援的 OpenAI 模型名稱</small>
               </div>
             </div>
 
             <!-- 當前模型列表 -->
             <div class="current-models-container">
-              <h6>📝 當前 OpenAI 模型：</h6>
+              <h6 data-i18n="llm.openaiCurrentModelsTitle">📝 當前 OpenAI 模型：</h6>
               <div id="openaiModelsList" class="models-list">
-                <div class="models-placeholder">載入中...</div>
+                <div class="models-placeholder" data-i18n="llm.modelsPlaceholder">載入中...</div>
               </div>
               <div class="models-info">
-                <span id="openaiModelsCountInfo">模型數量：0</span>
-                <span id="openaiDefaultModelInfo">預設模型：未設定</span>
+                <span id="openaiModelsCountInfo" data-i18n="llm.modelsCountLabel">模型數量：0</span>
+                <span id="openaiDefaultModelInfo" data-i18n="llm.defaultModelLabel">預設模型：未設定</span>
               </div>
             </div>
           </div>
 
           <!-- OpenAI Compatible 模型管理 -->
           <div class="provider-models-section" id="compatible-models-section" style="display: none;">
-            <h5>🔧 OpenAI Compatible 模型</h5>
+            <h5 data-i18n="llm.compatibleModelsTitle">🔧 OpenAI Compatible 模型</h5>
             
             <!-- 添加新模型 -->
             <div class="add-model-container">
               <div class="add-model-form">
                 <div class="model-input-group">
-                  <input type="text" id="newCompatibleModelName" placeholder="輸入 Compatible 模型名稱（例如：claude-3-sonnet, llama-2）" class="model-input">
-                  <button id="addCompatibleModelBtn" class="btn-add-model">➕ 添加模型</button>
+                  <input type="text" id="newCompatibleModelName" data-i18n-placeholder="llm.compatibleModelPlaceholder" placeholder="輸入 Compatible 模型名稱（例如：claude-3-sonnet, llama-2）" class="model-input">
+                  <button id="addCompatibleModelBtn" class="btn-add-model" data-i18n="llm.addModelBtn">➕ 添加模型</button>
                 </div>
-                <small>輸入要支援的 OpenAI Compatible 模型名稱</small>
+                <small data-i18n="llm.compatibleAddModelDesc">輸入要支援的 OpenAI Compatible 模型名稱</small>
               </div>
             </div>
 
             <!-- 當前模型列表 -->
             <div class="current-models-container">
-              <h6>📝 當前 Compatible 模型：</h6>
+              <h6 data-i18n="llm.compatibleCurrentModelsTitle">📝 當前 Compatible 模型：</h6>
               <div id="compatibleModelsList" class="models-list">
-                <div class="models-placeholder">載入中...</div>
+                <div class="models-placeholder" data-i18n="llm.modelsPlaceholder">載入中...</div>
               </div>
               <div class="models-info">
-                <span id="compatibleModelsCountInfo">模型數量：0</span>
-                <span id="compatibleDefaultModelInfo">預設模型：未設定</span>
+                <span id="compatibleModelsCountInfo" data-i18n="llm.modelsCountLabel">模型數量：0</span>
+                <span id="compatibleDefaultModelInfo" data-i18n="llm.defaultModelLabel">預設模型：未設定</span>
               </div>
             </div>
           </div>
@@ -309,11 +310,11 @@
           <!-- 全局預設模型選擇 -->
           <div class="default-model-container">
             <div class="setting-row">
-              <label for="globalDefaultModelSelect">全局預設模型</label>
+              <label for="globalDefaultModelSelect" data-i18n="llm.globalDefaultModelLabel">全局預設模型</label>
               <select id="globalDefaultModelSelect" class="default-model-dropdown">
-                <option value="">選擇全局預設模型...</option>
+                <option value="" data-i18n="llm.globalDefaultModelSelectPlaceholder">選擇全局預設模型...</option>
               </select>
-              <small>選擇訊息增強功能的全局預設模型（跨所有提供商）</small>
+              <small data-i18n="llm.globalDefaultModelSelectDesc">選擇訊息增強功能的全局預設模型（跨所有提供商）</small>
             </div>
           </div>
         </div>
@@ -321,8 +322,8 @@
         <!-- 操作按鈕 -->
         <div class="llm-controls" id="llm-actions" style="display: none;">
           <div class="llm-buttons">
-            <button id="saveLLMSettings" class="btn-primary">💾 保存設定</button>
-            <button id="resetLLMSettings" class="btn-secondary">🔄 重置設定</button>
+            <button id="saveLLMSettings" class="btn-primary" data-i18n="llm.save">💾 保存設定</button>
+            <button id="resetLLMSettings" class="btn-secondary" data-i18n="llm.reset">🔄 重置設定</button>
           </div>
           <div id="llmActionStatus" class="llm-status"></div>
         </div>
@@ -332,12 +333,12 @@
     <div class="status-container">
       <div id="slackStatus" class="status-indicator">
         <span id="statusIcon">⏳</span>
-        <span id="statusText">檢查 Slack 頁面...</span>
+        <span id="statusText" data-i18n="status.checking">檢查 Slack 頁面...</span>
       </div>
     </div>
 
     <div class="footer">
-      <p>💡 提示：確保您已經登入 Slack 和 Gemini</p>
+      <p data-i18n="status.tip">💡 提示：確保您已經登入 Slack 和 Gemini</p>
     </div>
   </div>
 
@@ -348,7 +349,7 @@
         <div class="sync-icon-container">
           <div class="sync-spinner">🔄</div>
         </div>
-        <h2>正在同步 Gemini 模型</h2>
+        <h2 data-i18n="modal.syncingTitle">正在同步 Gemini 模型</h2>
       </div>
       
       <div class="modal-body">
@@ -356,28 +357,28 @@
           <div class="progress-steps">
             <div class="step" id="step1">
               <span class="step-icon">⏳</span>
-              <span class="step-text">開啟 Gemini 頁面...</span>
+              <span class="step-text" data-i18n="modal.step1">開啟 Gemini 頁面...</span>
             </div>
             <div class="step" id="step2">
               <span class="step-icon">⏳</span>
-              <span class="step-text">等待頁面載入...</span>
+              <span class="step-text" data-i18n="modal.step2">等待頁面載入...</span>
             </div>
             <div class="step" id="step3">
               <span class="step-icon">⏳</span>
-              <span class="step-text">檢測可用模型...</span>
+              <span class="step-text" data-i18n="modal.step3">檢測可用模型...</span>
             </div>
             <div class="step" id="step4">
               <span class="step-icon">⏳</span>
-              <span class="step-text">保存模型列表...</span>
+              <span class="step-text" data-i18n="modal.step4">保存模型列表...</span>
             </div>
           </div>
           
           <div class="sync-details">
-            <p class="sync-message" id="syncMessage">
+            <p class="sync-message" id="syncMessage" data-i18n="modal.syncMessage">
               正在開啟 Gemini 頁面進行模型同步，請稍候...
             </p>
             <div class="sync-timer">
-              <span id="syncTimer">已用時間: 0 秒</span>
+              <span id="syncTimer" data-i18n="modal.syncTimer">已用時間: 0 秒</span>
             </div>
           </div>
         </div>
@@ -385,10 +386,10 @@
       
       <div class="modal-footer">
         <div class="sync-warning">
-          <p>⚠️ 同步過程中請勿關閉此視窗</p>
-          <p>🔄 同步完成後會自動關閉 Gemini 頁面</p>
+          <p data-i18n="modal.warning1">⚠️ 同步過程中請勿關閉此視窗</p>
+          <p data-i18n="modal.warning2">🔄 同步完成後會自動關閉 Gemini 頁面</p>
         </div>
-        <button id="cancelSyncBtn" class="btn-secondary" disabled>
+        <button id="cancelSyncBtn" class="btn-secondary" disabled data-i18n="modal.cancelSync">
           ❌ 取消同步
         </button>
       </div>

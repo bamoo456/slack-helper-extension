@@ -150,6 +150,14 @@
 
     "userModelsTitle": "📋 Supported Models Management",
     "userModelsHint": "Manage your list of supported models. These models will be available for selection in message enhancement features.",
+    "openaiModelsTitle": "🤖 OpenAI Models",
+    "openaiModelPlaceholder": "Enter OpenAI model name (e.g., gpt-4, gpt-3.5-turbo)",
+    "openaiAddModelDesc": "Enter the OpenAI model name to support",
+    "openaiCurrentModelsTitle": "📝 Current OpenAI Models:",
+    "compatibleModelsTitle": "🔧 OpenAI Compatible Models",
+    "compatibleModelPlaceholder": "Enter Compatible model name (e.g., claude-3-sonnet, llama-2)",
+    "compatibleAddModelDesc": "Enter the OpenAI Compatible model name to support",
+    "compatibleCurrentModelsTitle": "📝 Current Compatible Models:",
     "addModelPlaceholder": "Enter model name (e.g., gpt-4, claude-3-sonnet)",
     "addModelBtn": "➕ Add Model",
     "addModelDesc": "Enter the model name to support, supports OpenAI and other compatible API models",
@@ -162,6 +170,9 @@
     "defaultModelSelectLabel": "Default Model",
     "defaultModelSelectPlaceholder": "Select default model...",
     "defaultModelSelectDesc": "Select the default model for message enhancement features",
+    "globalDefaultModelLabel": "Global Default Model",
+    "globalDefaultModelSelectPlaceholder": "Select global default model...",
+    "globalDefaultModelSelectDesc": "Select the global default model for message enhancement features (across all providers)",
     "setDefaultBtn": "Set as Default",
     "removeBtn": "Remove",
     "defaultBadge": "Default",
@@ -252,9 +263,9 @@
     "step3": "Detecting available models...",
     "step4": "Saving model list...",
     "syncMessage": "Opening Gemini page for model sync, please wait...",
-    "syncTimer": "Elapsed time: {{time}} seconds",
-    "warning1": "⚠️ Do not close this window during sync",
-    "warning2": "🔄 Gemini page will auto-close after sync completion",
+    "syncTimer": "Elapsed time: 0 seconds",
+    "warning1": "⚠️ Please do not close this window during sync",
+    "warning2": "🔄 Gemini page will close automatically after sync",
     "cancelSync": "❌ Cancel Sync"
   },
   "ui": {
@@ -492,6 +503,7 @@
   "language": {
     "switch": "🌐 Switch Language",
     "current": "English",
-    "traditionalChinese": "Traditional Chinese"
+    "traditionalChinese": "Traditional Chinese",
+    "english": "English"
   }
 }
