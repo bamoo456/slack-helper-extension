@@ -404,28 +404,5 @@
   margin-bottom: 20px;
 }
 
-.slack-helper-processing-preview {
-  text-align: left;
-  background: #f8f9fa;
-  border-radius: 8px;
-  padding: 16px;
-  margin-top: 20px;
-}
 
-.slack-helper-processing-preview-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: #666;
-  margin-bottom: 8px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.slack-helper-processing-preview-text {
-  font-size: 14px;
-  color: #333;
-  line-height: 1.4;
-  white-space: pre-wrap;
-  word-wrap: break-word;
-}
 

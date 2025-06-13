@@ -1128,33 +1128,10 @@ export class MessageHelper {
     timeIndicator.className = 'slack-helper-processing-time';
     timeIndicator.textContent = '0s';
     
-    // Show original text preview if provided
-    let originalPreview = null;
-    if (originalText && originalText.trim()) {
-      originalPreview = document.createElement('div');
-      originalPreview.className = 'slack-helper-processing-preview';
-      
-      const previewLabel = document.createElement('div');
-      previewLabel.className = 'slack-helper-processing-preview-label';
-      previewLabel.textContent = 'Processing text:';
-      
-      const previewText = document.createElement('div');
-      previewText.className = 'slack-helper-processing-preview-text';
-      previewText.textContent = originalText.length > 200 ? 
-        originalText.substring(0, 200) + '...' : originalText;
-      
-      originalPreview.appendChild(previewLabel);
-      originalPreview.appendChild(previewText);
-    }
-    
     // Assemble content
     content.appendChild(spinnerContainer);
     content.appendChild(statusMessage);
     content.appendChild(timeIndicator);
-    
-    if (originalPreview) {
-      content.appendChild(originalPreview);
-    }
     
     // Assemble overlay
     overlay.appendChild(header);
