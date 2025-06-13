@@ -86,7 +86,8 @@ export class MessageHelper {
       // Fallback to default translations
       this.translations = {
         refineMessage: 'Refine Message',
-        customPromptPlaceholder: 'Modify with a prompt... (Ctrl+Enter to apply)',
+        customPromptPlaceholder: 'Help me write... (Ctrl+Enter to apply)',
+        customPromptHint: '💡 Add {MESSAGE} to your prompt to include the current message content',
         rephrase: 'Rephrase',
         refine: 'Refine',
         fixGrammar: 'Fix grammar',
@@ -197,10 +198,16 @@ export class MessageHelper {
   updateDropdownTexts() {
     if (!this.currentDropdown) return;
 
+    // Update custom prompt hint
+    const hintText = this.currentDropdown.querySelector('.slack-helper-custom-prompt-hint');
+    if (hintText) {
+      hintText.textContent = this.t('customPromptHint', '💡 Add {MESSAGE} to your prompt to include the current message content');
+    }
+
     // Update custom prompt placeholder
     const textarea = this.currentDropdown.querySelector('.slack-helper-custom-prompt-input');
     if (textarea) {
-      textarea.placeholder = this.t('customPromptPlaceholder', 'Modify with a prompt... (Ctrl+Enter to apply)');
+      textarea.placeholder = this.t('customPromptPlaceholder', 'Help me write... (Ctrl+Enter to apply)');
     }
 
     // Update menu items
@@ -763,13 +770,19 @@ export class MessageHelper {
     
     const textarea = document.createElement('textarea');
     textarea.className = 'slack-helper-custom-prompt-input';
-    textarea.placeholder = this.t('customPromptPlaceholder', 'Modify with a prompt... (Ctrl+Enter to apply)');
+    textarea.placeholder = this.t('customPromptPlaceholder', 'Help me write... (Ctrl+Enter to apply)');
     textarea.rows = 3;
     
     // Add event handlers
     this.addTextareaEventHandlers(textarea, button);
     
+    // Create hint text
+    const hintText = document.createElement('div');
+    hintText.className = 'slack-helper-custom-prompt-hint';
+    hintText.textContent = this.t('customPromptHint', '💡 Add {MESSAGE} to your prompt to include the current message content');
+    
     inputContainer.appendChild(textarea);
+    inputContainer.appendChild(hintText);
     
     // Focus textarea
     setTimeout(() => textarea.focus(), 150);
@@ -852,37 +865,75 @@ export class MessageHelper {
 
     const currentText = this.extractTextFromInput(inputElement);
     
-    if (!currentText.trim()) {
-      alert(this.t('pleaseTypeMessage', 'Please type a message first before applying custom prompt.'));
-      return;
-    }
-
-    try {
-      // Show full-screen processing overlay
-      this.showProcessingOverlay(
-        this.t('processingCustomPrompt', 'Processing with custom prompt...'),
-        this.t('customPrompt', 'Custom Prompt'),
-        currentText
-      );
+    // Check if prompt contains {MESSAGE} placeholder
+    if (customPrompt.includes('{MESSAGE}')) {
+      if (!currentText.trim()) {
+        alert(this.t('pleaseTypeMessage', 'Please type a message first before applying custom prompt.'));
+        return;
+      }
+      // Replace {MESSAGE} with the current text
+      const processedPrompt = customPrompt.replace(/{MESSAGE}/g, currentText);
       
-      // Also show button loading state as backup
-      this.showLoadingState(button, this.t('processingCustomPrompt', 'Processing with custom prompt...'));
+      try {
+        // Show full-screen processing overlay
+        this.showProcessingOverlay(
+          this.t('processingCustomPrompt', 'Processing with custom prompt...'),
+          this.t('customPrompt', 'Custom Prompt')
+        );
+        
+        // Also show button loading state as backup
+        this.showLoadingState(button, this.t('processingCustomPrompt', 'Processing with custom prompt...'));
+        
+        // For {MESSAGE} prompts, we send the processed prompt directly as a standalone request
+        // We use a dummy text since the LLM service expects some text, but the real content is in the prompt
+        const processedText = await llmService.processText(' ', 'custom', processedPrompt);
+        
+        // Hide processing overlay and loading state
+        this.hideProcessingOverlay();
+        this.hideLoadingState(button);
+        
+        // Show result preview
+        this.showResultPreview(inputElement, currentText, processedText, this.t('customPrompt', 'Custom Prompt'), customPrompt);
+        
+      } catch (error) {
+        console.error('Error processing custom prompt:', error);
+        this.hideProcessingOverlay();
+        this.hideLoadingState(button);
+        alert(`${this.t('errorProcessingRequest', 'Error processing your request')}: ${error.message}`);
+      }
+    } else {
+      // If no {MESSAGE} placeholder, use traditional approach
+      if (!currentText.trim()) {
+        alert(this.t('pleaseTypeMessage', 'Please type a message first before applying custom prompt.'));
+        return;
+      }
       
-      // Process text with LLM service
-      const processedText = await llmService.processText(currentText, 'custom', customPrompt);
-      
-      // Hide processing overlay and loading state
-      this.hideProcessingOverlay();
-      this.hideLoadingState(button);
-      
-      // Show result preview
-      this.showResultPreview(inputElement, currentText, processedText, this.t('customPrompt', 'Custom Prompt'), customPrompt);
-      
-    } catch (error) {
-      console.error('Error processing custom prompt:', error);
-      this.hideProcessingOverlay();
-      this.hideLoadingState(button);
-      alert(`${this.t('errorProcessingRequest', 'Error processing your request')}: ${error.message}`);
+      try {
+        // Show full-screen processing overlay
+        this.showProcessingOverlay(
+          this.t('processingCustomPrompt', 'Processing with custom prompt...'),
+          this.t('customPrompt', 'Custom Prompt')
+        );
+        
+        // Also show button loading state as backup
+        this.showLoadingState(button, this.t('processingCustomPrompt', 'Processing with custom prompt...'));
+        
+        // Use current text with custom prompt as instruction
+        const processedText = await llmService.processText(currentText, 'custom', customPrompt);
+        
+        // Hide processing overlay and loading state
+        this.hideProcessingOverlay();
+        this.hideLoadingState(button);
+        
+        // Show result preview
+        this.showResultPreview(inputElement, currentText, processedText, this.t('customPrompt', 'Custom Prompt'), customPrompt);
+        
+      } catch (error) {
+        console.error('Error processing custom prompt:', error);
+        this.hideProcessingOverlay();
+        this.hideLoadingState(button);
+        alert(`${this.t('errorProcessingRequest', 'Error processing your request')}: ${error.message}`);
+      }
     }
   }
 
@@ -956,8 +1007,7 @@ export class MessageHelper {
       // Show full-screen processing overlay
       this.showProcessingOverlay(
         actionConfig.message,
-        action,
-        currentText
+        action
       );
       
       // Also show button loading state as backup
@@ -1075,7 +1125,7 @@ export class MessageHelper {
   /**
    * Show full-screen processing overlay
    */
-  showProcessingOverlay(message, actionType = '', originalText = '') {
+  showProcessingOverlay(message, actionType = '') {
     // Hide any existing overlay first
     this.hideProcessingOverlay();
     

@@ -79,6 +79,13 @@ class MockLLMProvider extends BaseLLMProvider {
   }
 
   mockCustom(text, customPrompt) {
+    // If text is empty or just whitespace, the customPrompt likely contains the full content
+    // (e.g., when {MESSAGE} placeholder was replaced)
+    if (!text || text.trim() === '') {
+      return `🎯 Custom prompt result: ${customPrompt}\n\n(This is a mock result - the actual implementation will process your custom prompt using AI)`;
+    }
+    
+    // Traditional approach: apply custom prompt to text
     return `🎯 Applied "${customPrompt}" to: ${text}\n\n(This is a mock result - the actual implementation will apply your custom prompt using AI)`;
   }
 }
@@ -146,7 +153,7 @@ class OpenAIProvider extends BaseLLMProvider {
       'rephrase': `Please rephrase the following message to make it sound different while keeping the same meaning:\n\n${text}`,
       'refine': `Please refine and improve the following message for better clarity, professionalism, and impact:\n\n${text}`,
       'fix_grammar': `Please fix any grammar, spelling, or punctuation errors in the following message:\n\n${text}`,
-      'custom': `${customPrompt}\n\nApply this instruction to the following message:\n\n${text}`
+      'custom': customPrompt
     };
 
     return actionPrompts[action] || `Please improve the following message:\n\n${text}`;
@@ -199,6 +206,8 @@ class OpenAICompatibleProvider extends BaseLLMProvider {
         ...this.customParams
       };
 
+      console.log(`Sending request to OpenAI Compatible API [${JSON.stringify(body, null, 2)}]`);
+
       // Send request via background script to bypass mixed-content restrictions
       const data = await new Promise((resolve, reject) => {
         chrome.runtime.sendMessage(
@@ -237,7 +246,7 @@ class OpenAICompatibleProvider extends BaseLLMProvider {
       'rephrase': `Please rephrase the following message to make it sound different while keeping the same meaning:\n\n${text}`,
       'refine': `Please refine and improve the following message for better clarity, professionalism, and impact:\n\n${text}`,
       'fix_grammar': `Please fix any grammar, spelling, or punctuation errors in the following message:\n\n${text}`,
-      'custom': `${customPrompt}\n\nApply this instruction to the following message:\n\n${text}`
+      'custom': customPrompt
     };
 
     return actionPrompts[action] || `Please improve the following message:\n\n${text}`;
@@ -321,8 +330,15 @@ export class LLMService {
    * @returns {Promise<string>} - Processed text
    */
   async processText(text, action, customPrompt = '') {
-    if (!text || !text.trim()) {
+    // For custom actions, allow empty text when customPrompt contains the full content
+    // (e.g., when {MESSAGE} placeholder was already replaced)
+    if (action !== 'custom' && (!text || !text.trim())) {
       throw new Error('Input text is required');
+    }
+    
+    // For custom actions, require either text or customPrompt
+    if (action === 'custom' && (!text || !text.trim()) && (!customPrompt || !customPrompt.trim())) {
+      throw new Error('Either input text or custom prompt is required for custom actions');
     }
 
     try {

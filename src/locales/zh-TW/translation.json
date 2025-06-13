@@ -208,7 +208,8 @@
   },
   "messageHelper": {
     "refineMessage": "優化訊息",
-    "customPromptPlaceholder": "使用提示詞修改... (Ctrl+Enter 套用)",
+    "customPromptPlaceholder": "幫我寫訊息... (Ctrl+Enter 套用)",
+    "customPromptHint": "💡 在您的提示詞中加入 {MESSAGE} 來包含當前訊息內容",
     "rephrase": "重新表達",
     "refine": "優化",
     "fixGrammar": "修正語法",

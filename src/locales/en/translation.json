@@ -209,7 +209,8 @@
   },
   "messageHelper": {
     "refineMessage": "Refine Message",
-    "customPromptPlaceholder": "Modify with a prompt... (Ctrl+Enter to apply)",
+    "customPromptPlaceholder": "Help me write... (Ctrl+Enter to apply)",
+    "customPromptHint": "💡 Add {MESSAGE} to your prompt to include the current message content",
     "rephrase": "Rephrase",
     "refine": "Refine",
     "fixGrammar": "Fix grammar",
