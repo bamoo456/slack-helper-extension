@@ -225,18 +225,7 @@ export class MessageHelper {
   updatePreviewTexts() {
     if (!this.currentPreview) return;
 
-    // Update section labels
-    const originalLabel = this.currentPreview.querySelector('.slack-helper-preview-section:first-of-type .slack-helper-preview-label');
-    if (originalLabel) {
-      originalLabel.textContent = this.t('original', 'Original:');
-    }
-
-    const resultLabel = this.currentPreview.querySelector('.slack-helper-preview-section:last-of-type .slack-helper-preview-label');
-    if (resultLabel) {
-      resultLabel.textContent = this.t('result', 'Result:');
-    }
-
-    // Update action buttons
+    // Update action buttons (no need to update section labels since we removed them)
     const copyBtn = this.currentPreview.querySelector('[data-action="copy"]');
     if (copyBtn) {
       copyBtn.textContent = this.t('copy', '📋 Copy');
@@ -1210,8 +1199,6 @@ export class MessageHelper {
     requestAnimationFrame(updateTime);
   }
 
-
-
   /**
    * Hide processing overlay
    */
@@ -1239,8 +1226,6 @@ export class MessageHelper {
     this.currentProcessingBackdrop = null;
     this.processingStartTime = null;
   }
-
-
 
   /**
    * Update input text content
@@ -1354,8 +1339,6 @@ export class MessageHelper {
     }
   }
 
-
-
   /**
    * Move cursor to end of contenteditable element
    */
@@ -1404,21 +1387,13 @@ export class MessageHelper {
     const content = document.createElement('div');
     content.className = 'slack-helper-preview-content';
     
-    // Original text section
-    const originalSection = document.createElement('div');
-    originalSection.className = 'slack-helper-preview-section';
-    originalSection.innerHTML = `
-      <div class="slack-helper-preview-label">${this.t('original', 'Original:')}</div>
-      <div class="slack-helper-preview-text slack-helper-preview-original">${this.escapeHtml(originalText)}</div>
-    `;
-
-    // Processed text section
+    // Create Slack-styled message preview
     const processedSection = document.createElement('div');
     processedSection.className = 'slack-helper-preview-section';
-    processedSection.innerHTML = `
-      <div class="slack-helper-preview-label">${this.t('result', 'Result:')}</div>
-      <div class="slack-helper-preview-text slack-helper-preview-result">${this.escapeHtml(processedText)}</div>
-    `;
+    
+    // Create Slack message container with native styling
+    const slackMessageContainer = this.createSlackStyledMessage(processedText);
+    processedSection.appendChild(slackMessageContainer);
 
     // Action buttons
     const actions = document.createElement('div');
@@ -1432,8 +1407,7 @@ export class MessageHelper {
       </button>
     `;
 
-    // Assemble preview
-    content.appendChild(originalSection);
+    // Assemble preview (only include processed section)
     content.appendChild(processedSection);
     preview.appendChild(header);
     preview.appendChild(content);
@@ -1561,6 +1535,91 @@ export class MessageHelper {
   }
 
   /**
+   * 將 markdown 轉換為單一 ql-code-block 的 HTML（只用於預覽）
+   */
+  convertMarkdownToSingleCodeBlockHtml(markdownText) {
+    if (!markdownText) return '';
+    let html = markdownText;
+    // 將多行 code block 轉成單一 ql-code-block
+    html = html.replace(/```[^\n]*\n([\s\S]*?)\n```/g, (match, code) => {
+      const safeCode = SlackMessageFormatter._escapeHtml(code);
+      return `<div class="ql-code-block">${safeCode.replace(/\n/g, '<br>')}</div>`;
+    });
+    // 將連續 quote 合併成單一 blockquote
+    html = html.replace(/(^> .*(?:\n> .*)*)/gm, (match) => {
+      // 移除每行開頭的 '> '，用 <br> 連接
+      const lines = match.split('\n').map(line => SlackMessageFormatter._escapeHtml(line.replace(/^> /, '')));
+      return `<blockquote>${lines.join('<br>')}</blockquote>`;
+    });
+    // 其他 markdown 處理
+    html = html.replace(/`([^`]+)`/g, (match, code) => {
+      return `<code>${SlackMessageFormatter._escapeHtml(code)}</code>`;
+    });
+    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, text, url) => {
+      return `<a href="${SlackMessageFormatter._escapeHtml(url)}" rel="noopener noreferrer" target="_blank">${SlackMessageFormatter._escapeHtml(text)}</a>`;
+    });
+    // 段落處理
+    const lines = html.split('\n');
+    const paragraphs = [];
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (line === '') {
+        paragraphs.push('<p><br></p>');
+      } else if (line.startsWith('<div class="ql-code-block">')) {
+        paragraphs.push(line);
+      } else if (line.startsWith('<blockquote>')) {
+        paragraphs.push(line);
+      } else {
+        paragraphs.push(`<p>${line}</p>`);
+      }
+    }
+    return paragraphs.join('');
+  }
+
+  // 修改 createSlackStyledMessage 預覽時使用單一 code block 處理
+  createSlackStyledMessage(processedText) {
+    const messageContainer = document.createElement('div');
+    messageContainer.className = 'slack-helper-slack-message-container';
+    const messageContent = document.createElement('div');
+    messageContent.className = 'slack-helper-slack-message-content';
+    messageContent.setAttribute('dir', 'auto');
+    messageContent.setAttribute('role', 'textbox');
+    messageContent.setAttribute('spellcheck', 'true');
+    // 預覽時用單一 code block 處理
+    const slackHtml = this.convertMarkdownToSingleCodeBlockHtml(processedText);
+    messageContent.innerHTML = slackHtml;
+    this.postProcessSlackContent(messageContent);
+    messageContainer.appendChild(messageContent);
+    return messageContainer;
+  }
+
+  /**
+   * Post-process Slack content to ensure proper structure
+   */
+  postProcessSlackContent(contentElement) {
+    // Ensure ts-mention elements have proper attributes
+    const mentions = contentElement.querySelectorAll('ts-mention');
+    mentions.forEach(mention => {
+      mention.setAttribute('spellcheck', 'false');
+      mention.setAttribute('dir', 'ltr');
+      if (!mention.classList.contains('c-member_slug')) {
+        mention.classList.add('c-member_slug', 'c-member_slug--link', 'ts_tip_texty');
+      }
+    });
+
+    // Ensure links have proper attributes
+    const links = contentElement.querySelectorAll('a');
+    links.forEach(link => {
+      if (!link.hasAttribute('rel')) {
+        link.setAttribute('rel', 'noopener noreferrer');
+      }
+      if (!link.hasAttribute('target')) {
+        link.setAttribute('target', '_blank');
+      }
+    });
+  }
+
+  /**
    * Escape HTML for safe display while preserving line breaks
    */
   escapeHtml(text) {
@@ -1671,15 +1730,6 @@ export class MessageHelper {
         margin-bottom: 0;
       }
 
-      .slack-helper-preview-label {
-        font-size: 12px;
-        font-weight: 600;
-        color: #666;
-        margin-bottom: 6px;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-      }
-
       .slack-helper-preview-text {
         padding: 12px;
         border-radius: 6px;
@@ -1689,16 +1739,158 @@ export class MessageHelper {
         word-wrap: break-word;
       }
 
-      .slack-helper-preview-original {
-        background: #f8f9fa;
-        border: 1px solid #e9ecef;
-        color: #666;
-      }
-
       .slack-helper-preview-result {
         background: #e8f5e8;
         border: 1px solid #c3e6cb;
         color: #155724;
+      }
+
+      /* Slack-styled message container */
+      .slack-helper-slack-message-container {
+        background: #ffffff;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        padding: 16px;
+        font-family: Slack-Lato, Slack-Fractions, appleLogo, sans-serif;
+        font-size: 15px;
+        line-height: 1.46668;
+        color: #1d1c1d;
+        max-width: 100%;
+        overflow-wrap: break-word;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        /* Mimic Slack's ql-editor styling */
+        direction: auto;
+      }
+
+      .slack-helper-slack-message-content {
+        /* Reset any inherited styles */
+        margin: 0;
+        padding: 0;
+        /* Mimic ql-editor attributes */
+        direction: auto;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+      }
+
+      /* Slack paragraph styling */
+      .slack-helper-slack-message-content p {
+        margin: 0 0 8px 0;
+        padding: 0;
+        line-height: 1.46668;
+        font-size: 15px;
+        color: #1d1c1d;
+      }
+
+      .slack-helper-slack-message-content p:last-child {
+        margin-bottom: 0;
+      }
+
+      /* Empty paragraph with just <br> */
+      .slack-helper-slack-message-content p:has(br:only-child) {
+        margin: 8px 0;
+        height: 1.46668em;
+        min-height: 1.46668em;
+      }
+
+      /* Handle empty paragraphs more specifically */
+      .slack-helper-slack-message-content p br:only-child {
+        display: block;
+        content: "";
+        margin-top: 0;
+      }
+
+      /* Slack code block styling */
+      .slack-helper-slack-message-content .ql-code-block {
+        background: #f8f8f8;
+        border: 1px solid #e0e0e0;
+        border-radius: 4px;
+        padding: 8px 12px;
+        margin: 4px 0;
+        font-family: Monaco, Menlo, Consolas, "Courier New", monospace;
+        font-size: 12px;
+        line-height: 1.50001;
+        color: #1d1c1d;
+        white-space: pre;
+        overflow-x: auto;
+        display: block;
+        width: 100%;
+        box-sizing: border-box;
+      }
+
+      /* Multiple consecutive code blocks should appear as one block */
+      .slack-helper-slack-message-content .ql-code-block + .ql-code-block {
+        margin-top: 0;
+        border-top: none;
+        border-top-left-radius: 0;
+        border-top-right-radius: 0;
+      }
+
+      .slack-helper-slack-message-content .ql-code-block:has(+ .ql-code-block) {
+        margin-bottom: 0;
+        border-bottom-left-radius: 0;
+        border-bottom-right-radius: 0;
+      }
+
+      /* Slack inline code styling */
+      .slack-helper-slack-message-content code {
+        background: #f8f8f8;
+        border: 1px solid #e0e0e0;
+        border-radius: 3px;
+        padding: 2px 4px;
+        font-family: Monaco, Menlo, Consolas, "Courier New", monospace;
+        font-size: 12px;
+        color: #e01e5a;
+        font-weight: 500;
+      }
+
+      /* Slack blockquote styling */
+      .slack-helper-slack-message-content blockquote {
+        margin: 4px 0;
+        padding: 0 0 0 12px;
+        border-left: 4px solid #e0e0e0;
+        color: #616061;
+        font-style: italic;
+        display: block;
+        font-size: 15px;
+        line-height: 1.46668;
+        background: none;
+      }
+
+      /* Slack link styling */
+      .slack-helper-slack-message-content a {
+        color: #1264a3;
+        text-decoration: none;
+      }
+
+      .slack-helper-slack-message-content a:hover {
+        text-decoration: underline;
+      }
+
+      /* Slack mention styling */
+      .slack-helper-slack-message-content ts-mention {
+        background: #e8f5e8;
+        color: #1264a3;
+        padding: 2px 4px;
+        border-radius: 3px;
+        font-weight: 500;
+        text-decoration: none;
+        cursor: pointer;
+        display: inline;
+        direction: ltr;
+      }
+
+      .slack-helper-slack-message-content ts-mention:hover {
+        background: #d4edda;
+      }
+
+      /* Handle c-member_slug classes that might be on ts-mention */
+      .slack-helper-slack-message-content ts-mention.c-member_slug {
+        background: #e8f5e8;
+        color: #1264a3;
+      }
+
+      .slack-helper-slack-message-content ts-mention.c-member_slug--link {
+        cursor: pointer;
       }
 
       .slack-helper-preview-actions {
