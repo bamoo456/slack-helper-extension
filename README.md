@@ -1,6 +1,8 @@
-# 🚀 Slack Helper Extension Quick Start Guide
+# 🚀 Slack Helper – AI Assistant for Slack
 
-Welcome to the Slack Helper Chrome Extension! This guide will help you set up, develop, and use the extension efficiently.
+Slack Helper is an AI-powered Chrome extension that supercharges Slack threads and draft messages. It lets you summarise conversations, refine or rephrase your text with one click, and seamlessly works with Google Gemini, OpenAI, or any OpenAI-compatible model.
+
+
 
 ## 1. Install Dependencies
 

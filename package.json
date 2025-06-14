@@ -1,7 +1,7 @@
 {
   "name": "slack-helper-extension",
   "version": "1.2.0",
-  "description": "A Chrome extension that improves your Slack experience.",
+  "description": "AI assistant for Slack that summarises threads, refines messages and integrates Google Gemini / OpenAI models.",
   "main": "background.js",
   "type": "module",
   "directories": {
