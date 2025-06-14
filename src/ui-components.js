@@ -124,20 +124,70 @@ export class SummaryButtonManager {
     const button = document.createElement('button');
     button.className = this.buttonClass;
     button.innerHTML = this.translations?.ui?.summaryButton || '📝 摘要此討論串';
+    const tooltipText = `${this.translations?.ui?.summaryButton || '📝 摘要此討論串'} (Ctrl+T)`;
+    button.setAttribute('data-tooltip', tooltipText); // 用於立即顯示的自訂 tooltip
     
+    // 確保 tooltip CSS 已插入
+    this.ensureTooltipStyles();
+
     Object.assign(button.style, this.buttonStyles);
     this.addButtonEventListeners(button, clickHandler);
     return button;
   }
 
   addButtonEventListeners(button, clickHandler) {
+    // Store original tooltip for restoration
+    const originalTooltip = button.getAttribute('data-tooltip');
+    
     button.addEventListener('mouseenter', () => {
       button.style.backgroundColor = '#611f69';
     });
     button.addEventListener('mouseleave', () => {
       button.style.backgroundColor = '#4A154B';
+      // Ensure tooltip preserved after hover
+      if (!button.getAttribute('data-tooltip')) {
+        button.setAttribute('data-tooltip', originalTooltip);
+      }
     });
     button.addEventListener('click', clickHandler);
+  }
+
+  /**
+   * Ensure tooltip CSS is injected once
+   */
+  ensureTooltipStyles() {
+    // Use the shared tooltip styles from message-helper.js
+    // Check if styles already exist, if not, inject them
+    if (document.getElementById('slack-helper-tooltip-styles')) return;
+
+    const style = document.createElement('style');
+    style.id = 'slack-helper-tooltip-styles';
+    style.textContent = `
+      [data-tooltip] {
+        position: relative;
+      }
+      [data-tooltip]::after {
+        content: attr(data-tooltip);
+        position: absolute;
+        top: 110%;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0, 0, 0, 0.75);
+        color: #fff;
+        padding: 4px 8px;
+        border-radius: 4px;
+        white-space: nowrap;
+        font-size: 12px;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.1s ease-in-out;
+        z-index: 10000;
+      }
+      [data-tooltip]:hover::after {
+        opacity: 1;
+      }
+    `;
+    document.head.appendChild(style);
   }
 
   async updateButtonState(button, state, text) {
@@ -221,6 +271,8 @@ export class SummaryButtonManager {
         // 只更新處於預設狀態的按鈕（不是載入中或其他狀態）
         if (!button.disabled) {
           button.innerHTML = this.translations?.ui?.summaryButton || '📝 摘要此討論串';
+          const tooltipText = `${this.translations?.ui?.summaryButton || '📝 摘要此討論串'} (Ctrl+T)`;
+          button.setAttribute('data-tooltip', tooltipText);
         }
       });
       

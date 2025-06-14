@@ -180,7 +180,8 @@ export class MessageHelper {
     this.toolbarButtonInstances.forEach((button, toolbar) => {
       if (button && button.parentElement) {
         button.setAttribute('aria-label', this.t('refineMessage', 'Refine Message'));
-        button.setAttribute('title', this.t('refineMessage', 'Refine Message'));
+        const tooltipText = `${this.t('refineMessage', 'Refine Message')} (Ctrl+W)`;
+        button.setAttribute('data-tooltip', tooltipText);
       }
     });
 
@@ -433,7 +434,13 @@ export class MessageHelper {
     button.className = 'c-button-unstyled c-icon_button c-icon_button--size_small slack-helper-refine-btn-toolbar';
     button.type = 'button';
     button.setAttribute('aria-label', this.t('refineMessage', 'Refine Message'));
-    button.setAttribute('title', this.t('refineMessage', 'Refine Message'));
+    
+    // Add tooltip with shortcut hint
+    const tooltipText = `${this.t('refineMessage', 'Refine Message')} (Ctrl+W)`;
+    button.setAttribute('data-tooltip', tooltipText);
+    
+    // Ensure tooltip CSS is injected
+    this.ensureTooltipStyles();
     
     // Create SVG icon
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -456,6 +463,42 @@ export class MessageHelper {
     });
 
     return button;
+  }
+
+  /**
+   * Ensure tooltip CSS is injected once
+   */
+  ensureTooltipStyles() {
+    if (document.getElementById('slack-helper-tooltip-styles')) return;
+
+    const style = document.createElement('style');
+    style.id = 'slack-helper-tooltip-styles';
+    style.textContent = `
+      [data-tooltip] {
+        position: relative;
+      }
+      [data-tooltip]::after {
+        content: attr(data-tooltip);
+        position: absolute;
+        top: 110%;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0, 0, 0, 0.75);
+        color: #fff;
+        padding: 4px 8px;
+        border-radius: 4px;
+        white-space: nowrap;
+        font-size: 12px;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.1s ease-in-out;
+        z-index: 10000;
+      }
+      [data-tooltip]:hover::after {
+        opacity: 1;
+      }
+    `;
+    document.head.appendChild(style);
   }
 
   /**
