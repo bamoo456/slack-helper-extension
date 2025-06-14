@@ -39,6 +39,10 @@ class SlackThreadExtractor {
         console.error('Error in PageObserver callback:', error);
       });
     });
+
+    // Bind and add global shortcut listener (Ctrl+T)
+    this.handleGlobalShortcut = this.handleGlobalShortcut.bind(this);
+    document.addEventListener('keydown', this.handleGlobalShortcut, true);
     this.initialized = false;
     
     this.init();
@@ -463,6 +467,24 @@ class SlackThreadExtractor {
              chrome.runtime.id;
     } catch (error) {
       return false;
+    }
+  }
+
+  /**
+   * Global keyboard shortcut handler.
+   * When user presses Ctrl+T (without Alt/Meta) and an AI Summary button is present,
+   * simulate a click on the button to trigger the summary.
+   */
+  handleGlobalShortcut(e) {
+    // Detect Ctrl+T (case-insensitive) without Alt/Meta keys
+    const isCtrlT = e.ctrlKey && !e.altKey && !e.metaKey && (e.key === 't' || e.key === 'T');
+    if (!isCtrlT) return;
+
+    const summaryButton = document.querySelector('.slack-helper-btn');
+    if (summaryButton) {
+      e.preventDefault();
+      e.stopPropagation();
+      summaryButton.click();
     }
   }
 }
