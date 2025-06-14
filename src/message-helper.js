@@ -39,6 +39,9 @@ export class MessageHelper {
     this.currentProcessingBackdrop = null;
     this.processingStartTime = null;
     
+    // Add map to keep track of keyboard shortcut listeners per input element
+    this.shortcutListeners = new WeakMap();
+    
     this.handleClickOutside = this.handleClickOutside.bind(this);
     this.handleKeyDown = this.handleKeyDown.bind(this);
     
@@ -351,6 +354,13 @@ export class MessageHelper {
     const toolbar = this.findToolbarForInput(inputElement);
     if (toolbar) {
       this.showRefineButtonInToolbar(toolbar);
+
+      // Attach keyboard shortcut (⌥+W on macOS, Ctrl+W on Windows)
+      const refineButton = this.toolbarButtonInstances.get(toolbar);
+      if (refineButton) {
+        this.addShortcutListener(inputElement, refineButton);
+      }
+
       this.observedInputs.add(inputElement);
     }
   }
@@ -2003,5 +2013,29 @@ export class MessageHelper {
     this.toolbarButtonInstances.clear();
     this.observedInputs.clear();
     this.initialized = false;
+  }
+
+  /**
+   * Add keyboard shortcut listener to open the refine dropdown.
+   *  - macOS: Option (Alt) + W
+   *  - Windows/Linux: Ctrl + W
+   */
+  addShortcutListener(inputElement, refineButton) {
+    // Avoid attaching multiple listeners to the same element
+    if (this.shortcutListeners.has(inputElement)) return;
+
+    const handler = async (e) => {
+      // Detect Ctrl+W (without Alt/Meta)
+      const isCtrlW = e.ctrlKey && !e.altKey && !e.metaKey && (e.key === 'w' || e.key === 'W');
+
+      if (isCtrlW) {
+        e.preventDefault();
+        e.stopPropagation();
+        await this.handleRefineClick(refineButton);
+      }
+    };
+
+    inputElement.addEventListener('keydown', handler);
+    this.shortcutListeners.set(inputElement, handler);
   }
 } 
