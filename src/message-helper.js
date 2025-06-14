@@ -5,6 +5,7 @@
 
 import { llmService } from './llm-service.js';
 import { SlackMessageFormatter } from './slack-message-formatter.js';
+import { ensureTooltipStyles as applyTooltipStyles } from './ui-utils.js';
 
 export class MessageHelper {
   constructor() {
@@ -469,36 +470,8 @@ export class MessageHelper {
    * Ensure tooltip CSS is injected once
    */
   ensureTooltipStyles() {
-    if (document.getElementById('slack-helper-tooltip-styles')) return;
-
-    const style = document.createElement('style');
-    style.id = 'slack-helper-tooltip-styles';
-    style.textContent = `
-      [data-tooltip] {
-        position: relative;
-      }
-      [data-tooltip]::after {
-        content: attr(data-tooltip);
-        position: absolute;
-        top: 110%;
-        left: 75%;
-        transform: translateX(-75%);
-        background: rgba(0, 0, 0, 0.75);
-        color: #fff;
-        padding: 4px 8px;
-        border-radius: 4px;
-        white-space: nowrap;
-        font-size: 12px;
-        opacity: 0;
-        pointer-events: none;
-        transition: opacity 0.1s ease-in-out;
-        z-index: 10000;
-      }
-      [data-tooltip]:hover::after {
-        opacity: 1;
-      }
-    `;
-    document.head.appendChild(style);
+    // Use shared utility to avoid duplicated style definitions.
+    applyTooltipStyles();
   }
 
   /**

@@ -5,6 +5,8 @@
 
 // Removed unused imports: sleep, debounce
 
+import { ensureTooltipStyles as applyTooltipStyles } from './ui-utils.js';
+
 /**
  * Summary Button Manager
  * Handles creation and management of the summary button
@@ -156,38 +158,8 @@ export class SummaryButtonManager {
    * Ensure tooltip CSS is injected once
    */
   ensureTooltipStyles() {
-    // Use the shared tooltip styles from message-helper.js
-    // Check if styles already exist, if not, inject them
-    if (document.getElementById('slack-helper-tooltip-styles')) return;
-
-    const style = document.createElement('style');
-    style.id = 'slack-helper-tooltip-styles';
-    style.textContent = `
-      [data-tooltip] {
-        position: relative;
-      }
-      [data-tooltip]::after {
-        content: attr(data-tooltip);
-        position: absolute;
-        top: 110%;
-        left: 75%;
-        transform: translateX(-75%);
-        background: rgba(0, 0, 0, 0.75);
-        color: #fff;
-        padding: 4px 8px;
-        border-radius: 4px;
-        white-space: nowrap;
-        font-size: 12px;
-        opacity: 0;
-        pointer-events: none;
-        transition: opacity 0.1s ease-in-out;
-        z-index: 10000;
-      }
-      [data-tooltip]:hover::after {
-        opacity: 1;
-      }
-    `;
-    document.head.appendChild(style);
+    // Delegates to shared util to avoid duplicate style definitions.
+    applyTooltipStyles();
   }
 
   async updateButtonState(button, state, text) {
