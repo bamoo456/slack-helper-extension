@@ -200,6 +200,8 @@
     "resetFailed": "重置設定失敗",
     "selectProviderFirst": "請先選擇 LLM 提供商",
     "fillRequiredFields": "請填寫所有必要欄位",
+    "hostPermissionDenied": "❌ 使用者拒絕授權此網域。設定未保存。",
+    "invalidBaseUrl": "API Base URL 格式不正確。",
     "invalidHeadersFormat": "自定義 Headers 格式錯誤，請使用有效的 JSON 格式",
     "invalidParamsFormat": "自定義參數格式錯誤，請使用有效的 JSON 格式",
     "apiKeyRequired": "請輸入 OpenAI API Key",

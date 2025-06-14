@@ -201,6 +201,8 @@
     "resetFailed": "Failed to reset settings",
     "selectProviderFirst": "Please select an LLM provider first",
     "fillRequiredFields": "Please fill in all required fields",
+    "hostPermissionDenied": "❌ User denied host permission for this domain. Settings not saved.",
+    "invalidBaseUrl": "API Base URL format is invalid.",
     "invalidHeadersFormat": "Invalid custom headers format, please use valid JSON",
     "invalidParamsFormat": "Invalid custom parameters format, please use valid JSON",
     "apiKeyRequired": "Please enter OpenAI API Key",

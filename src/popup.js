@@ -1651,7 +1651,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  function saveLLMSettingsHandler() {
+  async function saveLLMSettingsHandler() {
     const llmProviderSelect = document.getElementById('llmProviderSelect');
     const selectedProvider = llmProviderSelect?.value;
     const translations = currentTranslations?.llm || {};
@@ -1683,6 +1683,24 @@ document.addEventListener('DOMContentLoaded', function() {
       
       if (!baseUrl) {
         showLLMActionStatus(translations.fillRequiredFields || '請填寫所有必要欄位', 'error');
+        return;
+      }
+      // 確保使用者授權此網域存取權
+      try {
+        const urlObj = new URL(baseUrl);
+        const originPattern = `${urlObj.protocol}//${urlObj.hostname}/*`;
+        const granted = await new Promise((resolve) => {
+          chrome.permissions.contains({ origins: [originPattern] }, (has) => {
+            if (has) return resolve(true);
+            chrome.permissions.request({ origins: [originPattern] }, (granted) => resolve(granted));
+          });
+        });
+        if (!granted) {
+          showLLMActionStatus(translations.hostPermissionDenied || '使用者拒絕授權此網域', 'error');
+          return;
+        }
+      } catch (e) {
+        showLLMActionStatus(translations.invalidBaseUrl || 'API Base URL 格式不正確', 'error');
         return;
       }
       
