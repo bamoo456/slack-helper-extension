@@ -170,8 +170,8 @@ export class SummaryButtonManager {
         content: attr(data-tooltip);
         position: absolute;
         top: 110%;
-        left: 50%;
-        transform: translateX(-50%);
+        left: 75%;
+        transform: translateX(-75%);
         background: rgba(0, 0, 0, 0.75);
         color: #fff;
         padding: 4px 8px;
