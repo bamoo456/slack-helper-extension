@@ -12,9 +12,9 @@ As no user data is collected, we do not use any user information for any purpose
 We do not share any user information with anyone, as no data is collected or stored by this extension.
 
 ## Additional Information
-- The extension operates entirely on your local device and only interacts with Slack and Gemini web pages to provide its core functionality.
-- All permissions requested are strictly for providing the extension's features and are not used to collect or transmit data.
-- The extension does not use cookies, persistent identifiers, or track your browsing activity.
+- The extension operates entirely on your local device and only interacts with Slack, Gemini, and (optionally) a user-specified LLM API endpoint to provide its core functionality.
+- All permissions requested are strictly for providing the extension's features. Optional host permissions are only requested when you enter a custom LLM API URL, and are used solely to send your selected Slack thread text to that endpoint.
+- The extension does not use cookies, persistent identifiers, or track your browsing activity. No browsing data or page content from other sites is accessed, collected, or shared.
 
 If you have any questions or concerns about this privacy policy, please open an issue in this repository.
 
