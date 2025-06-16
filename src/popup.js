@@ -7,6 +7,40 @@
 // 全局變量存儲當前翻譯
 let currentTranslations = null;
 
+// >>> 新增：預設 OpenAI 模型清單及輔助方法 <<<
+
+/**
+ * Default OpenAI models list (kept in sync with OPENAI_CONFIG in llm-service.js)
+ */
+const DEFAULT_OPENAI_MODELS = [
+  { name: 'gpt-4.1', provider: 'openai', isDefault: false },
+  { name: 'gpt-4.1-mini', provider: 'openai', isDefault: true },
+  { name: 'gpt-4.1-nano', provider: 'openai', isDefault: false }
+];
+
+/**
+ * Ensure the default OpenAI models exist in chrome.storage.local.
+ * Only writes the defaults when the OpenAI model list is empty.
+ * @param {Function} callback Callback after ensuring (optional)
+ */
+function ensureDefaultOpenAIModels(callback = () => {}) {
+  chrome.storage.local.get(['providerModels'], function(result) {
+    const providerModels = result.providerModels || {};
+    const currentModels = providerModels.openai || [];
+
+    if (currentModels.length === 0) {
+      const timestamp = new Date().toISOString();
+      providerModels.openai = DEFAULT_OPENAI_MODELS.map(m => ({
+        ...m,
+        addedAt: timestamp
+      }));
+      chrome.storage.local.set({ providerModels }, callback);
+    } else {
+      callback();
+    }
+  });
+}
+
 document.addEventListener('DOMContentLoaded', function() {
   const statusIcon = document.getElementById('statusIcon');
   const statusText = document.getElementById('statusText');
@@ -41,6 +75,9 @@ document.addEventListener('DOMContentLoaded', function() {
   const languageSelect = document.getElementById('languageSelect');
 
   console.log('Popup loaded, starting Slack page check...');
+  
+  // 先確保預設模型已存在
+  ensureDefaultOpenAIModels();
   
   // 設置標籤頁功能 (優先執行，確保基本功能可用)
   setupTabSwitching();
@@ -1779,8 +1816,22 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // 清除保存的設定（包括用戶模型）
     chrome.storage.local.remove(['llmSettings', 'providerModels', 'globalDefaultModel'], function() {
-      const translations = currentTranslations?.llm || {};
-      showLLMActionStatus(translations.resetSuccess || '🔄 LLM 設定已重置', 'info');
+      // 移除完成後，重新寫入預設模型與全局預設
+      const timestamp = new Date().toISOString();
+      const defaultProviderModels = {
+        openai: DEFAULT_OPENAI_MODELS.map(m => ({
+          ...m,
+          addedAt: timestamp
+        }))
+      };
+
+      chrome.storage.local.set({
+        providerModels: defaultProviderModels,
+        globalDefaultModel: 'openai:gpt-4.1-mini'
+      }, function() {
+        const translations = currentTranslations?.llm || {};
+        showLLMActionStatus(translations.resetSuccess || '🔄 LLM 設定已重置並已恢復預設模型', 'info');
+      });
     });
   }
 

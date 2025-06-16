@@ -4,6 +4,18 @@
  */
 
 /**
+ * OpenAI Model Configuration
+ */
+const OPENAI_CONFIG = {
+  models: [
+    { name: 'gpt-4.1', id: 'gpt-4.1' },
+    { name: 'gpt-4.1-mini', id: 'gpt-4.1-mini' },
+    { name: 'gpt-4.1-nano', id: 'gpt-4.1-nano' }
+  ],
+  defaultModel: 'gpt-4.1-mini'
+};
+
+/**
  * Base LLM Provider interface
  */
 class BaseLLMProvider {
@@ -97,8 +109,24 @@ class OpenAIProvider extends BaseLLMProvider {
   constructor(config = {}) {
     super(config);
     this.apiKey = config.apiKey || '';
-    this.model = config.model || 'gpt-4.1-nano';
+    this.model = config.model || OPENAI_CONFIG.defaultModel;
     this.baseUrl = config.baseUrl || 'https://api.openai.com/v1';
+  }
+
+  /**
+   * Get available models
+   * @returns {Array} Available models
+   */
+  static getAvailableModels() {
+    return OPENAI_CONFIG.models;
+  }
+
+  /**
+   * Get default model
+   * @returns {string} Default model name
+   */
+  static getDefaultModel() {
+    return OPENAI_CONFIG.defaultModel;
   }
 
   async processText(text, action, customPrompt = '') {
