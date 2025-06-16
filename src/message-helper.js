@@ -700,7 +700,10 @@ export class MessageHelper {
         const providerModels = result.providerModels || {};
         
         if (globalDefault && globalDefault.includes(':')) {
-          const [provider, modelName] = globalDefault.split(':');
+          // Handle cases where modelName contains colons (e.g., "openai-compatible:mistral:7b")
+          const colonIndex = globalDefault.indexOf(':');
+          const provider = globalDefault.substring(0, colonIndex);
+          const modelName = globalDefault.substring(colonIndex + 1);
           const providerName = provider === 'openai' ? 'OpenAI' : 'OpenAI Compatible';
           resolve({
             value: globalDefault,

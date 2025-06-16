@@ -1677,7 +1677,10 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
           const translations = currentTranslations?.llm || {};
           if (selectedValue) {
-            const [provider, modelName] = selectedValue.split(':');
+            // Handle cases where modelName contains colons (e.g., "openai-compatible:mistral:7b")
+            const colonIndex = selectedValue.indexOf(':');
+            const provider = selectedValue.substring(0, colonIndex);
+            const modelName = selectedValue.substring(colonIndex + 1);
             const providerName = provider === 'openai' ? 'OpenAI' : 'OpenAI Compatible';
             showLLMActionStatus(translations.globalDefaultSet || `✅ 全局預設模型已設為 ${providerName} 的 "${modelName}"`, 'success');
           } else {

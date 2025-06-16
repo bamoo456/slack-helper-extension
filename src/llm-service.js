@@ -462,7 +462,15 @@ export class LLMService {
       }
       
       // Parse the global default model format: "provider:modelName"
-      const [providerType, modelName] = globalDefaultModel.split(':');
+      // Handle cases where modelName contains colons (e.g., "openai-compatible:mistral:7b")
+      const colonIndex = globalDefaultModel.indexOf(':');
+      if (colonIndex === -1) {
+        return null;
+      }
+      
+      const providerType = globalDefaultModel.substring(0, colonIndex);
+      const modelName = globalDefaultModel.substring(colonIndex + 1);
+      
       if (!providerType || !modelName) {
         return null;
       }
