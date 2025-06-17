@@ -1582,37 +1582,50 @@ document.addEventListener('DOMContentLoaded', function() {
       const translations = currentTranslations?.llm || {};
       const providerName = provider === 'openai' ? 'OpenAI' : 'OpenAI Compatible';
       
-      if (confirm(translations.confirmRemoveModel || `確定要移除 ${providerName} 模型 "${modelName}" 嗎？`)) {
-        chrome.storage.local.get(['providerModels'], function(result) {
-          const providerModels = result.providerModels || {};
-          const models = providerModels[provider] || [];
+      // 直接移除模型，不彈出二次確認視窗
+      // 同時讀取 providerModels 及 globalDefaultModel，方便後續一起更新
+      chrome.storage.local.get(['providerModels', 'globalDefaultModel'], function(result) {
+        const providerModels = result.providerModels || {};
+        const currentGlobalDefault = result.globalDefaultModel || '';
+        const models = providerModels[provider] || [];
+        
+        const modelIndex = models.findIndex(model => model.name === modelName);
+        if (modelIndex > -1) {
+          const removedModel = models[modelIndex];
+          models.splice(modelIndex, 1);
           
-          const modelIndex = models.findIndex(model => model.name === modelName);
-          if (modelIndex > -1) {
-            const removedModel = models[modelIndex];
-            models.splice(modelIndex, 1);
-            
-            // 如果移除的是預設模型，設置第一個模型為預設
-            if (removedModel.isDefault && models.length > 0) {
-              models[0].isDefault = true;
-            }
-            
-            providerModels[provider] = models;
-
-            chrome.storage.local.set({ providerModels: providerModels }, function() {
-              if (chrome.runtime.lastError) {
-                const translations = currentTranslations?.llm || {};
-                showLLMActionStatus(translations.removeModelFailed || '移除模型失敗', 'error');
-              } else {
-                const translations = currentTranslations?.llm || {};
-                showLLMActionStatus(translations.modelRemoved || `✅ ${providerName} 模型 "${modelName}" 已移除`, 'success');
-                loadProviderModels(provider);
-                loadGlobalDefaultModelOptions();
-              }
-            });
+          // 如果移除的是預設模型，設置第一個模型為預設
+          if (removedModel.isDefault && models.length > 0) {
+            models[0].isDefault = true;
           }
-        });
-      }
+          
+          // 若該供應商已無任何模型，將其鍵移除，保持資料整潔
+          if (models.length === 0) {
+            delete providerModels[provider];
+          } else {
+            providerModels[provider] = models;
+          }
+
+          const dataToSave = { providerModels };
+
+          // 若全局預設模型就是被刪除的模型，一併清空全局預設
+          if (currentGlobalDefault === `${provider}:${modelName}`) {
+            dataToSave.globalDefaultModel = '';
+          }
+
+          chrome.storage.local.set(dataToSave, function() {
+            if (chrome.runtime.lastError) {
+              const translations = currentTranslations?.llm || {};
+              showLLMActionStatus(translations.removeModelFailed || '移除模型失敗', 'error');
+            } else {
+              const translations = currentTranslations?.llm || {};
+              showLLMActionStatus(translations.modelRemoved || `✅ ${providerName} 模型 "${modelName}" 已移除`, 'success');
+              loadProviderModels(provider);
+              loadGlobalDefaultModelOptions();
+            }
+          });
+        }
+      });
     }
 
     function updateProviderModelsInfo(provider, models) {
