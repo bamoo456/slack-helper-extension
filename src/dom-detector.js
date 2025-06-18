@@ -86,7 +86,13 @@ export class SlackDOMDetector {
       return false;
     }
     
-    // Primary check: Look for thread-specific structural elements
+    // Quick exclusion: Ignore the global "Threads" overview list – it has class `p-threads_view`
+    // or `data-qa="threads_view"` and should **never** be considered an actual single-thread container.
+    if (element.classList.contains('p-threads_view') ||
+        (element.getAttribute('data-qa') && element.getAttribute('data-qa') === 'threads_view')) {
+      return false;
+    }
+
     const hasThreadTitle = element.querySelector('.p-flexpane__title_container') ||
                           element.querySelector('[data-qa="thread_header"]') ||
                           element.querySelector('.p-thread_view__header');
@@ -105,13 +111,12 @@ export class SlackDOMDetector {
     const hasFlexpaneBody = element.querySelector('[data-qa="flexpane_body"]') ||
                            element.classList.contains('p-flexpane__body');
     
-    // A valid thread container should have:
-    // 1. Basic visibility AND
-    // 2. Either thread title structure OR flexpane body OR (thread content AND thread identifiers)
+    // Relaxed heuristic previously accepted containers that merely had list content and
+    // thread-related class names (the overview list matched this). We now require either a
+    // dedicated thread header **or** a flexpane body to minimise false positives.
     const isValidThread = isInViewport && (
-      hasThreadTitle || 
-      hasFlexpaneBody ||
-      (hasThreadContent && hasThreadIdentifiers)
+      hasThreadTitle ||
+      hasFlexpaneBody
     );
     
     console.log('Thread container validation:', {

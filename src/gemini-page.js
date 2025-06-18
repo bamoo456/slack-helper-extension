@@ -200,6 +200,76 @@ export function extractAvailableModels() {
 export function switchModelAndPasteMessages(targetModelDisplayName, messages) {
   console.log(`Attempting to switch to model: ${targetModelDisplayName}`);
   
+  /**
+   * Local copy of pasteMessagesIntoGemini
+   * 這段程式碼必須與 switchModelAndPasteMessages 一起被注入到 Gemini 頁面，
+   * 因此放在函式內部以確保作用域完整，避免 ReferenceError。
+   * @param {string} msgs - 要貼上的訊息
+   */
+  function pasteMessagesIntoGemini(msgs) {
+    function findTextArea() {
+      const selectors = [
+        'div[contenteditable="true"]',
+        'textarea',
+        '[data-testid="chat-input"]',
+        '.ql-editor',
+        '[role="textbox"]',
+        '.chat-input',
+        'input[type="text"]'
+      ];
+
+      for (const selector of selectors) {
+        const element = document.querySelector(selector);
+        if (element && element.offsetParent !== null) {
+          return element;
+        }
+      }
+      return null;
+    }
+
+    function waitForTextArea(maxAttempts = 10, attempt = 0) {
+      const textArea = findTextArea();
+
+      if (textArea) {
+        textArea.focus();
+
+        if (textArea.tagName === 'TEXTAREA' || textArea.tagName === 'INPUT') {
+          textArea.value = msgs;
+          textArea.dispatchEvent(new Event('input', { bubbles: true }));
+        } else if (textArea.contentEditable === 'true') {
+          textArea.textContent = msgs;
+          textArea.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+
+        setTimeout(() => {
+          textArea.dispatchEvent(new Event('change', { bubbles: true }));
+          textArea.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+        }, 500);
+
+        console.log('Messages pasted into Gemini successfully (local)');
+        return true;
+      }
+
+      if (attempt < maxAttempts) {
+        console.log(`Attempt ${attempt + 1}: Text area not found, retrying...`);
+        setTimeout(() => waitForTextArea(maxAttempts, attempt + 1), 1000);
+      } else {
+        console.error('Could not find text input area in Gemini');
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(msgs).then(() => {
+            alert('無法自動貼上訊息，已複製到剪貼簿。請手動貼上 (Ctrl+V)');
+          });
+        }
+      }
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => waitForTextArea());
+    } else {
+      waitForTextArea();
+    }
+  }
+
   function findAndClickModelSwitcher() {
     // 尋找模型切換按鈕
     const modeSwitcherSelectors = [
